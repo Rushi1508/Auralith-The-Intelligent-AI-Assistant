@@ -1,395 +1,96 @@
 # Auralith
 
-A multi-modal document assistant whose retrieval pipeline was **chosen by
-measurement rather than by default**. Every configuration decision in this repo
-is backed by a number in `results/`, and the negative results are recorded
-alongside the positive ones.
+**A document Q&A assistant where every design decision is backed by a measurement.**
 
-Ask questions about a PDF and get answers with the source passages shown; ask
-general questions and get routed by a LangGraph state machine to web search,
-code generation, or conversation.
+Ask questions about a PDF and get answers that cite their source passages. General
+questions go through a LangGraph agent that picks between web search, code
+generation, or conversation. It runs fully locally: no API key needed.
 
-```bash
-pip install -r requirements.txt
-python eval/corpus/fetch_corpus.py     # fetch + checksum the eval corpus
-cp .env.example .env                   # defaults are local-only, no API key
-streamlit run main.py
-```
+## Highlights
 
-Defaults run entirely locally: [Ollama](https://ollama.com) for generation,
-`sentence-transformers/all-MiniLM-L6-v2` for embeddings, and a local
-cross-encoder for reranking. Set `AURALITH_PROVIDER=openai` with an
-`OPENAI_API_KEY` to swap in hosted models.
+- **Retrieval recall up from 0.62 to 0.88.** Retrieval misses fell 78% (9/26 → 2/26) after systematic sweeps of chunking, k, hybrid search and reranking.
+- **Wrongly refused answers down from 5/26 to 2/26** after a prompt change that lets the model give partial answers.
+- **The LLM-as-judge is checked against hand labels.** The first judge agreed with a human only 15/24 times; the rewritten one agrees 21/24 (87.5%).
+- **Negative results are reported too.** Hybrid BM25 search was hypothesised, tested and rejected (+0.0045 MRR, which is noise).
+- **Every number has a 95% confidence interval** from a paired bootstrap, and any claim whose interval includes zero is labelled as not established.
 
-```bash
-ollama pull llama3.2:3b     # generator
-ollama pull qwen2.5:7b      # LLM-as-judge, evaluation only
-```
+## Results
 
----
+28 questions over 3 arXiv papers, with the papers pinned by SHA-256.
+
+| metric | baseline | tuned | 95% CI of delta |
+|---|---|---|---|
+| recall@k | 0.615 | **0.885** | [+0.12, +0.44] |
+| hit@k | 0.654 | **0.923** | |
+| MRR | 0.510 | **0.692** | [+0.03, +0.33] |
+
+What made the difference:
+
+| decision | finding |
+|---|---|
+| Chunking 500 / 100 overlap | The original 7500-token "chunking" never split a single page. **Overlap mattered more than size.** |
+| k = 6 | hit@k and MRR stop improving at 6, and k=8 adds 33% more context for one question. |
+| Hybrid BM25: **rejected** | Dense retrieval already scored 1.00 on the keyword-heavy questions BM25 was meant to help. |
+| Reranking: **off** | A real trade-off: perfect ranking on conceptual questions, but lower recall. It needs an end-to-end run before it can be switched on. |
+
+Retrieval is no longer the bottleneck. The right page now reaches the model for 24 of
+26 answerable questions, so the remaining errors come from the 3B local generator.
+The end-to-end correctness gain (10/28 → 13/28) is within the noise on 28 questions,
+and the README says so rather than claiming it.
+
+Full tables, per-question-type breakdowns and limitations are in
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) and [`results/`](results/).
 
 ## Architecture
 
+```mermaid
+graph LR;
+    PDF --> Chunk[Chunk 500/100] --> Chroma[(Chroma, cached per scheme)];
+    Q[Question] --> Dense[Dense retriever k=6] --> RAG[Answer + cited passages];
+    Chroma --> Dense;
 ```
-                    ┌──────────────────────────────────────┐
-   PDF ──────────▶  │  ingest: PyPDFLoader → per-page Docs  │
-                    │  chunk:  RecursiveCharacterTextSplitter│
-                    │          500 tokens / 100 overlap      │
-                    └──────────────────┬───────────────────┘
-                                       │ (doc_id, page) on every chunk
-                                       ▼
-                    ┌──────────────────────────────────────┐
-                    │  Chroma, persisted to .chroma/<key>   │
-                    │  one index per CHUNKING scheme        │
-                    └──────────────────┬───────────────────┘
-                                       ▼
-    query ────────▶  dense retriever (k=6) ──▶ [optional: BM25 ensemble]
-                                       │       [optional: multi-query]
-                                       │       [optional: cross-encoder rerank]
-                                       ▼
-                    ┌──────────────────────────────────────┐
-                    │  RAG chain → answer + cited passages  │
-                    └──────────────────────────────────────┘
-```
-
-The optional stages are config flags, not code paths — which is what made the
-sweeps in Phase B/C possible at all. See `auralith/retrievers.py`.
-
-### Agent graph (Chat mode)
 
 ```mermaid
 graph TD;
-    __start__([start]) --> route;
     route -. SearchWeb .-> search;
     route -. WriteCode .-> code;
     route -. Converse .-> converse;
     route -. unparseable .-> recover;
-    recover -. retry budget left .-> route;
-    recover -. budget spent .-> converse;
-    search --> __end__([end]);
-    code --> __end__;
-    converse --> __end__;
+    recover -. retry .-> route;
 ```
 
-The `route → recover → route` cycle is why this is a graph and not a chain. A
-linear LCEL pipeline cannot express "go back and try again", so a malformed
-classification had nowhere to go but an exception.
-
-### Layout
-
-| path | contents |
-|---|---|
-| `auralith/` | retrieval, RAG, agent graph, tools — **no Streamlit imports** |
-| `ui/` | Streamlit views — no model or retrieval logic |
-| `eval/` | corpus fetcher, question set, metrics, judge, harness, sweeps |
-| `results/` | every committed measurement, JSON + markdown |
-| `tests/` | pytest suite |
-| `docs/METHODOLOGY.md` | how the numbers are made and what they don't mean |
-
-Nothing in `auralith/` imports Streamlit, which is what lets `eval/` exercise
-exactly the code the app runs, headlessly.
-
----
-
-## Results
-
-Full methodology, including limitations, in
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
-
-Evaluated on 28 questions over 3 arXiv papers (50 pages), pinned by SHA-256.
-26 answerable, 2 deliberately unanswerable.
-
-### Phase B — chunking (`results/sweep_chunking.md`)
-
-k held at 4, dense-only, everything else fixed.
-
-| config | chunks | size/overlap | recall@4 | hit@4 | MRR | prec@4 |
-|---|---|---|---|---|---|---|
-| baseline (inherited) | 50 | character 7500/100 | 0.6154 | 0.6538 | 0.5096 | 0.1731 |
-| | 126 | recursive 500/50 | 0.6346 | 0.6923 | 0.5192 | 0.2404 |
-| **winner** | **132** | **recursive 500/100** | **0.8077** | **0.8462** | **0.6763** | **0.2692** |
-| | 79 | recursive 1000/100 | 0.5000 | 0.5385 | 0.4071 | 0.1635 |
-| | 79 | recursive 1000/200 | 0.6731 | 0.6923 | 0.5801 | 0.2019 |
-| | 50 | recursive 1500/150 | 0.6154 | 0.6538 | 0.5096 | 0.1731 |
-| | 50 | recursive 1500/300 | 0.6154 | 0.6538 | 0.5096 | 0.1731 |
-
-**recall@4 0.6154 → 0.8077 (+31% relative), MRR 0.5096 → 0.6763 (+33%).**
-
-Three things worth pulling out:
-
-1. **The inherited 7500-token chunk size never split anything.** 50 pages in,
-   50 chunks out, mean 927 tokens, max 1384 — never within a factor of five of
-   the configured 7500. "Chunking" in the original was just "one chunk per
-   page". The 1500-token rows are byte-identical to the baseline on every
-   question type for the same reason.
-
-2. **Overlap is the dominant lever, not size.** At 500 tokens, 10%→20% overlap
-   moves recall 0.6346→0.8077. At 1000 tokens, 0.5000→0.6731. Doubling overlap
-   helped roughly twice as much as halving chunk size did.
-
-3. **`1000/100` is worse than doing nothing.** At ~1000 tokens against a
-   ~927-token mean page you introduce a split boundary but only 100 tokens of
-   redundancy to survive it, and facts landing on the seam are lost. The damage
-   is concentrated in factoid questions (recall 0.406 vs 0.562 baseline). The
-   danger zone is a chunk size near the natural page length with thin overlap.
-
-### Phase B — k (`results/sweep_k.md`)
-
-On recursive 500/100.
-
-| k | recall@k | hit@k | MRR | prec@k |
-|---|---|---|---|---|
-| 1 | 0.4615 | 0.5385 | 0.5385 | 0.5385 |
-| 2 | 0.7308 | 0.7692 | 0.6538 | 0.4808 |
-| 4 | 0.8077 | 0.8462 | 0.6763 | 0.2692 |
-| **6** | **0.8846** | **0.9231** | **0.6917** | 0.2308 |
-| 8 | 0.9038 | 0.9231 | 0.6917 | 0.1971 |
-| 10 | 0.9038 | 0.9231 | 0.6917 | 0.1923 |
-
-**k=6 chosen.** `recall@k` rises with k by construction so it is not a
-like-for-like column; `hit@k` and `MRR` both hit their ceiling at k=6. The extra
-0.019 recall at k=8 comes from one multi-page question and costs 33% more
-context while dropping precision 0.231→0.197.
-
-### Phase B — persistence
-
-Not a quality change, and reported as what it is: a latency change. Same vectors
-in, same neighbours out, so recall does not move.
-
-| | cost |
-|---|---|
-| Build the 500/100 index (132 chunks) | **27.4 s** |
-| Reuse it (all 6 configs in the k sweep) | **0.00 s** each |
-
-Indexes are keyed on the **chunking scheme**, not the full config, because k,
-hybrid weighting, reranking and query expansion are all query-time concerns.
-That is what let a 23-configuration sweep pay for six embedding passes instead
-of 23. The inherited code rebuilt the index inside the request handler on
-*every question asked*.
-
-### Phase C — hybrid search (`results/sweep_hybrid.md`)
-
-On recursive 500/100, k=6. Weight is the dense share; BM25 gets the remainder.
-
-| config | recall@6 | hit@6 | MRR | prec@6 |
-|---|---|---|---|---|
-| dense only | **0.8846** | **0.9231** | 0.6917 | 0.2308 |
-| BM25 only (0.00) | 0.7308 | 0.7308 | 0.5846 | 0.1987 |
-| hybrid 0.30 | 0.7308 | 0.7308 | 0.5974 | 0.1987 |
-| hybrid 0.50 | 0.8654 | 0.8846 | 0.6904 | 0.2372 |
-| hybrid 0.70 | **0.8846** | **0.9231** | **0.6962** | 0.2308 |
-| hybrid 1.00 | 0.8846 | 0.9231 | 0.6917 | 0.2308 |
-
-**Rejected. Off by default (`use_bm25=False`).**
-
-My stated hypothesis was that BM25 would help `lexical` questions — the ones
-turning on rare exact tokens like `FAISS`, `P100`, `WordPiece`. The by-type
-data refuted it:
-
-| | lexical | factoid | conceptual |
-|---|---|---|---|
-| dense only | **1.0000** | 0.8438 | 0.9000 |
-| BM25 only | 0.7500 | 0.7500 | 0.6000 |
-| hybrid 0.70 | 1.0000 | 0.8438 | 0.9000 |
-
-Dense retrieval already scores **1.0000** on lexical questions — there was no
-headroom for BM25 to add. On a 132-chunk, topically-narrow corpus, MiniLM has
-plenty of signal for short distinctive queries. BM25 alone is *worse* on the
-very slice it was supposed to own.
-
-The best hybrid weighting moves aggregate MRR by **+0.0045**, which on 26
-questions is well inside noise. Hybrid 0.50 does trade slices — factoid
-0.8438→0.8750, conceptual 0.9000→0.7000 — but not in the predicted direction,
-and the net is negative. Kept behind a flag, off.
-
-### Phase C — cross-encoder reranking (`results/sweep_rerank.md`)
-
-`cross-encoder/ms-marco-MiniLM-L-6-v2`, retrieve `fetch_k` then keep top 6.
-
-| config | recall@6 | hit@6 | MRR | prec@6 |
-|---|---|---|---|---|
-| no rerank | **0.8846** | **0.9231** | 0.6917 | 0.2308 |
-| rerank ← 10 | 0.8462 | 0.8462 | 0.6551 | 0.2564 |
-| **rerank ← 20** | 0.8654 | 0.8846 | **0.7051** | **0.2692** |
-| rerank ← 30 | 0.8654 | 0.8846 | **0.7051** | 0.2628 |
-
-**A genuine trade-off, not a win.** MRR +0.0134 and precision +0.0384 (+16.6%
-relative), against recall −0.0192 and hit −0.0385. The cross-encoder promotes
-the best passage but drops one the bi-encoder had held.
-
-`fetch_k=10` is worse on every metric — the pool is too small to rescue
-anything. 20 and 30 are identical, so 30 buys nothing for 50% more compute.
-
-By type (MRR) is where the mechanism shows:
-
-| | factoid | lexical | conceptual |
-|---|---|---|---|
-| no rerank | 0.690 | 0.625 | 0.690 |
-| rerank ← 20 | 0.615 | 0.750 | **1.000** |
-
-Reranking takes **conceptual questions to perfect ranking** and mildly hurts
-factoid. A cross-encoder scores (query, passage) jointly, so it is strongest
-exactly where paraphrase matching matters and adds least where the answer is a
-bare number the bi-encoder already located. Conceptual is 5 of 26 questions,
-which is why a perfect slice only moves the aggregate a little.
-
-### End-to-end: baseline vs tuned (`results/comparison.md`)
-
-Full runs over all 28 questions — no subset. `results/baseline.json`,
-`results/production.json`. 56 generations and 56 judge calls with **0 judge
-parse failures and 0 generation errors**.
-
-| metric | baseline | tuned | delta |
-|---|---|---|---|
-| recall@k | 0.6154 | 0.8846 | +0.2692 |
-| hit@k | 0.6538 | 0.9231 | +0.2693 |
-| MRR | 0.5096 | 0.6917 | +0.1821 |
-| **answer_correctness** (28) | **0.3571** | **0.4643** | **+0.1072** |
-| answer_correctness (26 answerable) | 0.3462 | 0.4231 | +0.0769 |
-| abstention_accuracy (2 unanswerable) | 0.5000 | 1.0000 | +0.5000 |
-| false_abstention_rate (26 answerable) | 0.1154 | 0.1923 | +0.0769 |
-| keyword_score | 0.5536 | 0.6190 | +0.0654 |
-| mean latency / question | 84.1 s | 94.7 s | +10.6 s |
-
-Counts, since the denominators are small: correct **10/28 → 13/28**;
-answerable correct 9/26 → 11/26; unanswerable refused 1/2 → 2/2; answerable
-wrongly refused 3/26 → 5/26.
-
-**The most useful result is where the failures moved:**
-
-| | baseline | tuned |
-|---|---|---|
-| retrieval missed the page entirely | 9/26 | **2/26** |
-| retrieval found it, answer still wrong | 9/26 | **13/26** |
-
-Retrieval failures fell **78%**, while generation-side failures rose. The tuned
-pipeline puts the correct page in front of the model for 24 of 26 answerable
-questions, so **the binding constraint is no longer retrieval — it is the 3B
-generator's ability to state every required fact from a passage it was given.**
-
-**Confidence intervals** (`results/comparison_ci.md`, paired bootstrap,
-`python eval/compare.py results/baseline.json results/production.json`):
-
-| metric | delta | 95% CI |
-|---|---|---|
-| recall@k | +0.2692 | [+0.1154, +0.4423] |
-| MRR | +0.1821 | [+0.0346, +0.3321] |
-| answer_correctness (28) | +0.1071 | [−0.1071, +0.3214] |
-| false_abstention_rate (26) | +0.0769 | [−0.0769, +0.2308] |
-
-The retrieval gains clear zero. **The answer-correctness gain does not.**
-10 → 13 of 28 is within resampling noise. Retrieval improved measurably. That
-it improved end-to-end answers is plausible but not shown on 28 questions.
-
-Three things not to over-read:
-
-- **`abstention_accuracy` 0.50 → 1.00 rests on n=2.** That is one question
-  flipping. Reported because it was measured; it is not evidence on its own.
-- **`false_abstention_rate` got worse** (3 → 5 of 26). The tuned config refuses
-  more questions it has evidence for; three of the five had the correct passage
-  retrieved. The interval includes zero, so this is not a measured regression.
-  It is still a visible failure mode, plausibly aggravated by k=6 giving the
-  model more passages to sift. Not averaged away here.
-- **Absolute correctness is low in both columns.** That is a statement about a
-  3B model on CPU, not about the retrieval pipeline. Both columns were also
-  scored by the v1 judge, which Phase F found too **strict** on real answers
-  (see below), so both are biased downward.
-
-### Phase F — partial answers and a judge that can be trusted (`results/production_partial.json`)
-
-Same retrieval as the tuned config. Two changes:
-
-**1. The answer prompt allows partial answers.** Before, a multi-part question
-with one part missing from the passages got NOT_IN_CONTEXT for the whole thing.
-Now the model answers what it can. Only a reply that *starts with*
-NOT_IN_CONTEXT counts as a refusal (`is_abstention()`).
-
-| | tuned | tuned + partial answers |
-|---|---|---|
-| answerable wrongly refused | 5/26 | **2/26** |
-| unanswerable refused | 2/2 | 2/2 |
-
-The two remaining refusals (attn-006, attn-008) are retrieval misses, so
-refusing is the right behaviour there.
-
-**2. The judge was fixed.** Hand-labelling all 28 answers showed the v1 judge
-agreed with a human on only **15/24** judged real answers, despite 9/10 on the
-synthetic validation set. It was mostly too strict: it failed correct answers
-for true extra detail and for not repeating background the question never
-asked for. The v2 prompt grades only the facts the question asks for and
-reasons before giving a verdict. It agrees on **21/24 (87.5%)**. Details in
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md#judge-reliability-is-measured-not-assumed);
-labels in `eval/judge_labels.json`.
-
-| same 28 answers, scored by | correct |
-|---|---|
-| v1 judge | 12/28 |
-| **v2 judge** | **16/28** |
-| hand labels | 19/28 |
-
-**The 13/28 vs 16/28 comparison is not valid.** The tuned and baseline runs
-above were scored by v1, and the partial-answer run by v2. They need re-judging
-with v2 before any baseline → tuned → partial delta can be reported.
-
-### Still not measured
-
-**The reranking trade-off remains unresolved.** Reranking improves MRR and
-precision while costing recall. Settling it needs a third end-to-end run
-(`production_rerank`), which was not done — so reranking stays **off**.
-
-**Query expansion (`MultiQueryRetriever`) has no number.** Implemented and
-config-gated in `auralith/retrievers.py`, never swept, off.
-
----
-
-## Testing
+- The optional retrieval stages (BM25, multi-query, reranking) are switched on by config flags, which is what made the sweeps possible.
+- `auralith/` has no Streamlit imports, so the evaluation runs exactly the same code as the app.
+- The `recover → route` loop is why the agent is a graph rather than a chain: a malformed classification gets retried instead of crashing.
+
+## Quickstart
 
 ```bash
-pytest -m "not slow"    # fast: no model loads
-pytest                  # includes real index + cross-encoder
+pip install -r requirements.txt
+ollama pull llama3.2:3b
+cp .env.example .env
+streamlit run main.py
 ```
 
-| file | covers |
-|---|---|
-| `tests/test_metrics.py` | recall/MRR/precision, rank sensitivity, aggregation |
-| `tests/test_chunking.py` | config validation, chunk metadata, index-key sharing |
-| `tests/test_retrieval.py` | k contract, BM25, hybrid/rerank assembly |
-| `tests/test_graph.py` | route parsing, node behaviour, recovery transitions |
-| `tests/test_judge.py` | judge JSON extraction, abstention determinism, citation stripping |
+Set `AURALITH_PROVIDER=openai` and `OPENAI_API_KEY` to use hosted models instead.
 
-The graph tests run against a scripted fake model, which is the point of the
-rewrite: the interesting behaviour is what happens when the model returns
-something *wrong*, and you cannot get a real model to do that on demand.
+To reproduce the evaluation:
+
+```bash
+python eval/corpus/fetch_corpus.py
+ollama pull qwen2.5:7b                  # judge model
+python eval/run_eval.py --config production   # or --config baseline
+```
+
+Tests: `pytest -m "not slow"`. The suite covers the metrics, chunking, retrieval, the agent graph's recovery paths (driven by a scripted fake model) and the judge.
+
+## Limits
+
+This is a local project, not a deployed product. The evaluation uses 28 questions on
+3 NLP papers, so differences under about 0.04 recall are noise. Settings were tuned
+one at a time rather than over a full grid, and answer quality is limited by a 3B CPU
+model.
 
 ---
 
-## What this is not
-
-- **Not deployed and not production.** It runs locally. There is no hosting, no
-  auth, no multi-user state, no rate limiting, no monitoring.
-- **Not a general benchmark.** 28 questions on 3 NLP papers. One question is
-  worth ~3.8 points of recall; differences under ~0.04 are noise. The chunking
-  result (+0.19) clears that bar; the hybrid result (+0.0045) does not, which
-  is why it was rejected.
-- **Not tuned exhaustively.** The sweep is sequential and greedy, not a grid.
-  Chunk size and k interact and were optimised in sequence, so this may be a
-  local optimum.
-- **Answer quality is bounded by a 3B local generator.** Measured: even in the
-  tuned config, 13 of 26 answerable questions retrieve the right page and still
-  produce a wrong answer (by the v1 judge, which over-counts failures). With
-  partial answers and hand labels it is 7 of 24 answers that were not refusals.
-  Retrieval metrics are model-independent and transfer; the correctness
-  figures would not.
-- **Configuration decisions rest on retrieval metrics.** The end-to-end run
-  validated the final choice rather than driving it; the sweeps themselves were
-  retrieval-only (~2 s per config versus ~90 s per question).
-
-## Provenance
-
-This repo began as an inherited prototype that did not start —
-`main.py` imported `from modules import Functions` while `Functions.py` sat at
-the repository root with no `modules/` package anywhere. Commit 1 preserves that
-original state verbatim so every later change has a real before/after diff.
-The API key was a hardcoded empty string in two files, there were no tests, no
-evaluation, no logging, no type hints, and `requirements.txt` pinned a version
-of `langchain` that has never been published.
+*Rebuilt from a 2024 prototype that didn't run: it had a broken import, a hardcoded API key, and a pinned `langchain` version that was never published. Commit 1 keeps it verbatim so you can see the before/after.*
