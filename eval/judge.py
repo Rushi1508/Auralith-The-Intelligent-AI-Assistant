@@ -33,6 +33,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -41,16 +42,16 @@ from auralith.rag import NOT_IN_CONTEXT, is_abstention
 
 log = logging.getLogger(__name__)
 
-JUDGE_PROMPT = """You are grading a question-answering system. Decide whether the \
-CANDIDATE ANSWER conveys the same factual content as the REFERENCE ANSWER.
+# Reasoning-before-verdict and question-scoped facts. The first prompt asked
+# for "all key facts in the reference", so a 7B judge failed answers for omitting
+# background the question never asked for, and for true extra detail; it agreed
+# with hand labels on only 15/24 real answers (see judge_labels.json).
+JUDGE_PROMPT = """You are grading a question-answering system against a reference answer.
 
-Grading rules:
-- Judge FACTS, not wording. A paraphrase with the same facts is correct.
-- All key facts in the reference must be present. Missing a required number or \
-name makes it incorrect.
-- Extra correct detail is fine. Extra INCORRECT detail makes it incorrect.
-- If the candidate says it cannot answer, it is incorrect unless the reference \
-also says NOT_IN_CONTEXT.
+Step 1: List the facts the QUESTION asks for, taking their correct values from the REFERENCE ANSWER. Only facts the question asks for are required. Anything else in the reference is background and is NOT required.
+Step 2: For each required fact, check whether the CANDIDATE ANSWER states it with the same value. Paraphrase and different wording are fine.
+Step 3: The candidate is correct only if every required fact is present and nothing in it contradicts the reference or is clearly false. Extra detail that the reference simply does not mention is fine.
+A candidate that says it cannot answer is incorrect.
 
 QUESTION: {question}
 
@@ -59,7 +60,11 @@ REFERENCE ANSWER: {reference}
 CANDIDATE ANSWER: {candidate}
 
 Respond with ONLY a JSON object, no other text:
-{{"correct": true or false, "reason": "<one short sentence>"}}"""
+{{"required_facts": ["..."], "missing_or_wrong": ["..."], "correct": true or false}}"""
+
+# Citation markers like "[2]" or "(source: bert, page 3)" carry no facts and a
+# bare "[1]" line made the judge report the answer as missing content.
+_CITATION = re.compile(r"\[\d+\](?:\s*\(source:[^)]*\))?")
 
 
 @dataclass
@@ -114,7 +119,7 @@ def judge_answer(
         return JudgeVerdict(score=0.0, reason="Abstained on an answerable question.")
 
     prompt = JUDGE_PROMPT.format(
-        question=question, reference=reference, candidate=candidate
+        question=question, reference=reference, candidate=_CITATION.sub("", candidate).strip()
     )
     last_raw = ""
     for attempt in range(retries + 1):
@@ -132,7 +137,7 @@ def judge_answer(
                 verdict = verdict.strip().lower() in {"true", "yes", "correct"}
             return JudgeVerdict(
                 score=1.0 if verdict else 0.0,
-                reason=str(parsed.get("reason", ""))[:300],
+                reason=str(parsed.get("missing_or_wrong") or parsed.get("reason", ""))[:300],
                 raw=last_raw[:500],
             )
 
@@ -179,6 +184,7 @@ def validate_judge(
         )
         rows.append(
             {
+                "id": c.get("id"),
                 "question": c["question"],
                 "candidate": c["candidate"],
                 "expected": c["expected"],
@@ -266,7 +272,8 @@ JUDGE_VALIDATION_CASES: list[dict[str, Any]] = [
         "note": "The exact hallucination the unanswerable questions exist to catch.",
     },
     {
-        "question": "What optimizer did the Transformer authors use?",
+        "question": "What optimizer did the Transformer authors use, and what beta "
+        "and epsilon values?",
         "reference": "Adam, with beta_1 = 0.9, beta_2 = 0.98 and epsilon = 10^-9.",
         "candidate": "They used the Adam optimizer.",
         "expected": 0.0,
@@ -274,3 +281,13 @@ JUDGE_VALIDATION_CASES: list[dict[str, Any]] = [
         "'all key facts must be present' rule.",
     },
 ]
+
+
+# Real answers from a full run (results/production_partial.json), hand-labelled.
+# The synthetic cases above test edge cases; these test the answers the judge
+# actually sees, which is where the 7B judge turned out to fail.
+JUDGE_LABELS_PATH = Path(__file__).resolve().parent / "judge_labels.json"
+
+
+def load_judge_labels(path: Path = JUDGE_LABELS_PATH) -> list[dict[str, Any]]:
+    return json.loads(path.read_text(encoding="utf-8"))

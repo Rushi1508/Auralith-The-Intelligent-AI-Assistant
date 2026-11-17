@@ -104,19 +104,41 @@ human-written reference. Design constraints:
 
 ### Judge reliability is measured, not assumed
 
-`python eval/run_eval.py --validate-judge` scores the judge against 10
-hand-labelled cases including adversarial ones — right number/wrong unit,
-paraphrase with no shared vocabulary, correct fact contaminated with a
-fabricated detail.
+`python eval/run_eval.py --validate-judge` scores the judge against two sets
+(`results/judge_validation.json`):
 
-**Result: 9/10 = 90% agreement** (`results/judge_validation.json`).
+* **synthetic** — 10 hand-written adversarial cases in `eval/judge.py`: right
+  number/wrong unit, paraphrase with no shared vocabulary, correct fact
+  contaminated with a fabricated detail.
+* **real** — 24 actual answers from a full run (`eval/judge_labels.json`), each
+  hand-labelled with a note. The two abstentions on answerable questions are
+  scored deterministically and are not included.
 
-The single disagreement is diagnostic and is not swept under the rug: the judge
-accepted *"They used the Adam optimizer"* against a reference requiring the beta
-values, i.e. it is **lenient toward incomplete answers**. So
-`answer_correctness` is biased slightly **upward**. It correctly caught both
-hallucination cases and the wrong-unit case, which are the failure modes that
-matter most here.
+| judge prompt | synthetic | real |
+|---|---|---|
+| v1: "all key facts in the reference must be present" | 9/10 | **15/24 (62.5%)** |
+| v2: question-scoped facts, reasoning before verdict, citations stripped | 8/10 | **21/24 (87.5%)** |
+
+**The synthetic set hid the problem.** v1 scored 90% on synthetic cases, but on
+real answers it made 8 false negatives and 1 false positive. It failed correct
+answers for leaving out reference background the question never asked for
+(rag-006), for true extra detail (bert-004's `[CLS]` sentence), and for a bare
+`[1]` citation line (attn-001, reported as "missing the number of layers"). So
+v1's `answer_correctness` was biased **downward**, not upward as stated earlier.
+
+v2 lists the facts the *question* asks for, checks each one, and only then gives
+a verdict. Its remaining errors:
+
+* attn-003: the answer includes a true line about BERT's 12 heads, and the judge
+  reads it as the Transformer's head count.
+* bert-002: a correct answer is marked wrong, with no reason given.
+* rag-001: a borderline label. The judge's objection (the per-token vs
+  per-sequence difference is never stated plainly) is fair.
+* synthetic: it accepts a made-up extra detail it cannot check without the
+  passages, and rejects "one in seven" as a paraphrase of 15%.
+
+Making the itemised `missing_or_wrong` list decide the verdict fixed two cases
+and broke two others, so it was not kept.
 
 A deterministic `keyword_score` runs alongside the judge on every question. It
 is too strict to be a headline metric, but divergence between the two is how

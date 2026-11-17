@@ -1,98 +1,372 @@
 {
   "judge_model": "qwen2.5:7b",
-  "n_cases": 10,
-  "n_agree": 9,
-  "agreement": 0.9,
-  "disagreements": [
-    {
-      "question": "What optimizer did the Transformer authors use?",
-      "candidate": "They used the Adam optimizer.",
-      "expected": 0.0,
-      "judged": 1.0,
-      "agree": false,
-      "reason": "The candidate answer conveys the same factual content as the reference answer."
-    }
-  ],
-  "cases": [
-    {
-      "question": "How many identical layers are stacked in the Transformer encoder?",
-      "candidate": "The encoder has 6 identical layers.",
-      "expected": 1.0,
-      "judged": 1.0,
-      "agree": true,
-      "reason": "Same factual content."
-    },
-    {
-      "question": "How many identical layers are stacked in the Transformer encoder?",
-      "candidate": "The encoder is composed of 12 identical layers.",
-      "expected": 0.0,
-      "judged": 0.0,
-      "agree": true,
-      "reason": "Incorrect number of layers."
-    },
-    {
-      "question": "How many identical layers are stacked in the Transformer encoder?",
-      "candidate": "N = 6.",
-      "expected": 1.0,
-      "judged": 1.0,
-      "agree": true,
-      "reason": "The candidate answer conveys the same factual content as the reference."
-    },
-    {
-      "question": "What percentage of WordPiece tokens does BERT mask?",
-      "candidate": "BERT masks about one in seven tokens at random.",
-      "expected": 1.0,
-      "judged": 1.0,
-      "agree": true,
-      "reason": "Both answers convey the same fact with different wording."
-    },
-    {
-      "question": "What percentage of WordPiece tokens does BERT mask?",
-      "candidate": "15 tokens per sequence are masked.",
-      "expected": 0.0,
-      "judged": 0.0,
-      "agree": true,
-      "reason": "Percentage is missing."
-    },
-    {
-      "question": "How many parameters does BART-large have?",
-      "candidate": "BART-large has 400 million parameters, and was pre-trained with a denoising objective.",
-      "expected": 1.0,
-      "judged": 1.0,
-      "agree": true,
-      "reason": "Both answers provide the same factual content."
-    },
-    {
-      "question": "How many parameters does BART-large have?",
-      "candidate": "BART-large has 400 million parameters and 24 encoder layers trained on the December 2018 Wikipedia dump.",
-      "expected": 0.0,
-      "judged": 0.0,
-      "agree": true,
-      "reason": "Extra incorrect detail about encoder layers and training data."
-    },
-    {
-      "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
-      "candidate": "NOT_IN_CONTEXT",
-      "expected": 1.0,
-      "judged": 1.0,
-      "agree": true,
-      "reason": "Correctly abstained."
-    },
-    {
-      "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
-      "candidate": "The Transformer achieved 29.1 BLEU on English-to-Romanian.",
-      "expected": 0.0,
-      "judged": 0.0,
-      "agree": true,
-      "reason": "Should have abstained."
-    },
-    {
-      "question": "What optimizer did the Transformer authors use?",
-      "candidate": "They used the Adam optimizer.",
-      "expected": 0.0,
-      "judged": 1.0,
-      "agree": false,
-      "reason": "The candidate answer conveys the same factual content as the reference answer."
-    }
-  ]
+  "synthetic": {
+    "n_cases": 10,
+    "n_agree": 8,
+    "agreement": 0.8,
+    "disagreements": [
+      {
+        "id": null,
+        "question": "What percentage of WordPiece tokens does BERT mask?",
+        "candidate": "BERT masks about one in seven tokens at random.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "How many parameters does BART-large have?",
+        "candidate": "BART-large has 400 million parameters and 24 encoder layers trained on the December 2018 Wikipedia dump.",
+        "expected": 0.0,
+        "judged": 1.0,
+        "agree": false,
+        "reason": ""
+      }
+    ],
+    "cases": [
+      {
+        "id": null,
+        "question": "How many identical layers are stacked in the Transformer encoder?",
+        "candidate": "The encoder has 6 identical layers.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "How many identical layers are stacked in the Transformer encoder?",
+        "candidate": "The encoder is composed of 12 identical layers.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['The candidate answer states that the number of identical layers is 12, which contradicts the reference answer.']"
+      },
+      {
+        "id": null,
+        "question": "How many identical layers are stacked in the Transformer encoder?",
+        "candidate": "N = 6.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "What percentage of WordPiece tokens does BERT mask?",
+        "candidate": "BERT masks about one in seven tokens at random.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "What percentage of WordPiece tokens does BERT mask?",
+        "candidate": "15 tokens per sequence are masked.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "How many parameters does BART-large have?",
+        "candidate": "BART-large has 400 million parameters, and was pre-trained with a denoising objective.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "How many parameters does BART-large have?",
+        "candidate": "BART-large has 400 million parameters and 24 encoder layers trained on the December 2018 Wikipedia dump.",
+        "expected": 0.0,
+        "judged": 1.0,
+        "agree": false,
+        "reason": ""
+      },
+      {
+        "id": null,
+        "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
+        "candidate": "NOT_IN_CONTEXT",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": "Correctly abstained."
+      },
+      {
+        "id": null,
+        "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
+        "candidate": "The Transformer achieved 29.1 BLEU on English-to-Romanian.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "Should have abstained."
+      },
+      {
+        "id": null,
+        "question": "What optimizer did the Transformer authors use, and what beta and epsilon values?",
+        "candidate": "They used the Adam optimizer.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": ""
+      }
+    ]
+  },
+  "real": {
+    "n_cases": 24,
+    "n_agree": 21,
+    "agreement": 0.875,
+    "disagreements": [
+      {
+        "id": "attn-003",
+        "question": "How many attention heads does the base Transformer use, and what are the key and value dimensions per head?",
+        "candidate": "[2] (source: bert, page 3)\nThe number of self-attention heads is denoted as A. For the BERTBASE model, A = 12.\n\n[3] (source: attention, page 3)\nThe key and value dimensions per head are dk = dv = dmodel/h, where h is the number of heads. Since for the base Transformer, h = 8, we have dk = dv = 64.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": "['The candidate answer states the number of self-attention heads as A = 12, which contradicts the reference answer where h = 8.']"
+      },
+      {
+        "id": "bert-002",
+        "question": "What percentage of WordPiece tokens does BERT mask during masked language model pre-training?",
+        "candidate": "[1] [3]\n\nAccording to passage [1], 15% of all WordPiece tokens in each sequence are masked at random. Passage [3] further explains that this masking is done with a uniform rate, where:\n\n* 80% of the time, the masked token is replaced with the [MASK] token\n* 10% of the time, the masked token is replaced with a random word\n* 10% of the time, the masked token remains unchanged\n\nTherefore, the percentage of WordPiece tokens that BERT masks during masked language model pre-training is 15%, which can be broken down into:\n\n* [MASK] token: 80% (0.8 * 15%)\n* Random word: 10% (0.1 * 15%)\n* Unchanged: 10% (0.1 * 15%)\n\nSo, the total percentage of masked tokens is 15%.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": ""
+      },
+      {
+        "id": "rag-001",
+        "question": "What are the two RAG model formulations introduced in the paper, and how do they differ?",
+        "candidate": "[2] (source: rag, page 8) and [5] (source: rag, page 17).\n\nThe two RAG model formulations introduced in the paper are:\n\n1. RAG-Token: This is a standard, autoregressive seq2seq generator with transition probability: p\u2032\u03b8(yi|x,y 1:i\u22121) = \u2211z\u2208top-k(p(\u00b7|x))p\u03b7(zi|x)p\u03b8(yi|x,zi,y 1:i\u22121). To decode, we can plug p\u2032\u03b8(yi|x,y 1:i\u22121) into a standard beam decoder.\n2. RAG-Sequence: For RAG-Sequence, the likelihoodp(y|x) does not break into a conventional per-token likelihood, hence we cannot solve it with a single beam search. Instead, we run beam search for each documentz, scoring each hypothesis using p\u03b8(yi|x,z,y 1:i\u22121). This yields a set of hypotheses Y, some of which may not have appeared in the beams of all documents. To estimate the probability of an hypothesis y, we run an additional forward pass for each document z for which y does not appear in the beam, multiply generator probability with p\u03b7(z|x), and then sum the probabilities across beams for the marginals. We refer to this decoding procedure as \"Thorough Decoding\".",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": "['The candidate answer provides detailed decoding procedures which are not required by the question.', 'The candidate answer does not state that RAG-Sequence uses the same retrieved document to generate the complete output sequence.']"
+      }
+    ],
+    "cases": [
+      {
+        "id": "attn-001",
+        "question": "How many identical layers are stacked in the Transformer encoder?",
+        "candidate": "[1]\n\nThe Transformer encoder is composed of a stack of N = 6 identical layers.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "attn-002",
+        "question": "What BLEU score did the big Transformer model achieve on the WMT 2014 English-to-German translation task?",
+        "candidate": "[1] [2]\n\nThe big Transformer model achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation task, outperforming the best previously reported models by more than 2.0 BLEU.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "attn-003",
+        "question": "How many attention heads does the base Transformer use, and what are the key and value dimensions per head?",
+        "candidate": "[2] (source: bert, page 3)\nThe number of self-attention heads is denoted as A. For the BERTBASE model, A = 12.\n\n[3] (source: attention, page 3)\nThe key and value dimensions per head are dk = dv = dmodel/h, where h is the number of heads. Since for the base Transformer, h = 8, we have dk = dv = 64.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": "['The candidate answer states the number of self-attention heads as A = 12, which contradicts the reference answer where h = 8.']"
+      },
+      {
+        "id": "attn-004",
+        "question": "What is the inner-layer dimensionality of the position-wise feed-forward network?",
+        "candidate": "[3] (source: attention, page 3)\nThe inner-layer dimensionality of the position-wise feed-forward network is df = 2048.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "attn-005",
+        "question": "Why does scaled dot-product attention divide the dot products by the square root of d_k?",
+        "candidate": "[1], [2]\n\nThe dot products get large, and to counteract this effect, we scale the dot products by 1\u221adk. This is done to prevent the softmax function from having extremely small gradients.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "attn-007",
+        "question": "How many warmup steps were used in the Transformer learning rate schedule?",
+        "candidate": "[3][5]\n\nThe number of warmup steps used in the Transformer learning rate schedule was 4000.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "attn-009",
+        "question": "According to the complexity table, what is the maximum path length of a self-attention layer compared to a recurrent layer?",
+        "candidate": "[1]\n\nThe maximum path length of a self-attention layer is O(1), while that of a recurrent layer is O(n).",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "bert-001",
+        "question": "What are the layer count, hidden size, attention heads, and total parameters of BERT-BASE and BERT-LARGE?",
+        "candidate": "[1], [3]\n\nThe number of layers (L) for BERTBASE is 12, the hidden size (H) is 768, and the number of self-attention heads (A) is 12. The total parameters are 110M.\n\nFor BERT-LARGE, L = 24, H = 1024, A = 16, and Total Parameters = 340M.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "bert-002",
+        "question": "What percentage of WordPiece tokens does BERT mask during masked language model pre-training?",
+        "candidate": "[1] [3]\n\nAccording to passage [1], 15% of all WordPiece tokens in each sequence are masked at random. Passage [3] further explains that this masking is done with a uniform rate, where:\n\n* 80% of the time, the masked token is replaced with the [MASK] token\n* 10% of the time, the masked token is replaced with a random word\n* 10% of the time, the masked token remains unchanged\n\nTherefore, the percentage of WordPiece tokens that BERT masks during masked language model pre-training is 15%, which can be broken down into:\n\n* [MASK] token: 80% (0.8 * 15%)\n* Random word: 10% (0.1 * 15%)\n* Unchanged: 10% (0.1 * 15%)\n\nSo, the total percentage of masked tokens is 15%.",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": ""
+      },
+      {
+        "id": "bert-003",
+        "question": "When BERT selects a token position for masking, how is it replaced?",
+        "candidate": "[5] (source: bert, page 12)\n\nThe [MASK] token is replaced in three ways:\n\n*   80% of the time: The word with the [MASK] token is replaced with the actual observed word.\n*   10% of the time: The word with the [MASK] token is replaced with a random word.\n*   10% of the time: The word with the [MASK] token remains unchanged.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['The word with the [MASK] token is replaced with the actual observed word (instead of [MASK]) in 80% of the cases.']"
+      },
+      {
+        "id": "bert-004",
+        "question": "What tokenization scheme and vocabulary size does BERT use?",
+        "candidate": "[1], [2]\n\nBERT uses WordPiece embeddings with a 30,000 token vocabulary. The first token of every sequence is always a special classification token ([CLS]).",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "bert-005",
+        "question": "Which two unsupervised tasks is BERT pre-trained on?",
+        "candidate": "[5] \n\nBERT is pre-trained using two unsupervised tasks.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "bert-006",
+        "question": "What corpora were used to pre-train BERT, and how large were they?",
+        "candidate": "[1], [4]\n\nThe corpora used to pre-train BERT are the 3.3 billion word corpus (which is a combination of several sources including Wikipedia, BookCorpus, and others) and ImageNet.\n\nThe size of the pre-training corpus is not explicitly stated in the passages, but it can be inferred that it is very large, as mentioned in [4]: \"We train with batch size of 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch) for 1,000,000 steps...\"",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['The candidate answer includes incorrect information about the size and sources of the corpora.']"
+      },
+      {
+        "id": "bert-007",
+        "question": "What GLUE score did BERT-LARGE obtain on the official leaderboard, and what did OpenAI GPT obtain?",
+        "candidate": "[6]\n\nBERTLARGE obtained a score of 80.5 on the official GLUE leaderboard, while OpenAI GPT obtained a score of 72.8.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "bert-008",
+        "question": "What batch size and how many training steps were used for BERT pre-training, and how long did it take?",
+        "candidate": "[1], [2]\n\nThe batch size used for BERT pre-training was 128,000 words. The number of training steps used for BERT pre-training is not explicitly stated in the passage, but it is mentioned that the model was trained with sequence length of 128 for 90% of the steps and then trained the rest 10% of the steps of sequence of 512 to learn the positional embeddings.\n\nThe time taken for BERT pre-training is not provided in the passage.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['batch size stated as 128,000 words instead of 256 sequences (128,000 tokens per batch)', 'number of training steps not correctly stated or missing']"
+      },
+      {
+        "id": "rag-001",
+        "question": "What are the two RAG model formulations introduced in the paper, and how do they differ?",
+        "candidate": "[2] (source: rag, page 8) and [5] (source: rag, page 17).\n\nThe two RAG model formulations introduced in the paper are:\n\n1. RAG-Token: This is a standard, autoregressive seq2seq generator with transition probability: p\u2032\u03b8(yi|x,y 1:i\u22121) = \u2211z\u2208top-k(p(\u00b7|x))p\u03b7(zi|x)p\u03b8(yi|x,zi,y 1:i\u22121). To decode, we can plug p\u2032\u03b8(yi|x,y 1:i\u22121) into a standard beam decoder.\n2. RAG-Sequence: For RAG-Sequence, the likelihoodp(y|x) does not break into a conventional per-token likelihood, hence we cannot solve it with a single beam search. Instead, we run beam search for each documentz, scoring each hypothesis using p\u03b8(yi|x,z,y 1:i\u22121). This yields a set of hypotheses Y, some of which may not have appeared in the beams of all documents. To estimate the probability of an hypothesis y, we run an additional forward pass for each document z for which y does not appear in the beam, multiply generator probability with p\u03b7(z|x), and then sum the probabilities across beams for the marginals. We refer to this decoding procedure as \"Thorough Decoding\".",
+        "expected": 1.0,
+        "judged": 0.0,
+        "agree": false,
+        "reason": "['The candidate answer provides detailed decoding procedures which are not required by the question.', 'The candidate answer does not state that RAG-Sequence uses the same retrieved document to generate the complete output sequence.']"
+      },
+      {
+        "id": "rag-002",
+        "question": "Which retriever and which generator does RAG use?",
+        "candidate": "[2] [3]\n\nRAG uses DPR as its retriever, and BART as its generator.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "rag-003",
+        "question": "How many parameters does the BART-large generator used in RAG have?",
+        "candidate": "[2] [5]\n\nThe BART-large generator used in RAG has 406M trainable parameters.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "rag-004",
+        "question": "Which Wikipedia dump does RAG index, how is it chunked, and how many documents result?",
+        "candidate": "[3] \nRAG uses a single Wikipedia dump for its non-parametric knowledge source. The December 2018 dump is used.\n\n[3]\nThe Wikipedia articles are split into disjoint 100-word chunks to make a total of 21M documents.\n\nNOT_IN_CONTEXT",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "rag-005",
+        "question": "What library and approximation does RAG use to build its MIPS index?",
+        "candidate": "[2][3]\n\nThe library used to build the MIPS (Maximum Inner Product Search) index is DPR (Dense Passage Retrieval), which follows a bi-encoder architecture. The approximation used is based on the Maximum Inner Product Search (MIPS) problem, which can be approximately solved in sub-linear time.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['library: DPR', 'approximation: Maximum Inner Product Search (MIPS) problem']"
+      },
+      {
+        "id": "rag-006",
+        "question": "During RAG training, which components are fine-tuned and which are held fixed?",
+        "candidate": "[2][3][4]\n\nAccording to passage [4], the document encoder BERTd is kept fixed during training, while only the query encoder BERTq and the BART generator are fine-tuned.",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "rag-007",
+        "question": "What are the two decoding procedures RAG-Sequence uses called?",
+        "candidate": "[2][3]\n\nThe two decoding procedures RAG-Sequence uses are called \"Thorough Decoding\" and \"Fast Decoding\".",
+        "expected": 1.0,
+        "judged": 1.0,
+        "agree": true,
+        "reason": ""
+      },
+      {
+        "id": "rag-008",
+        "question": "In the index hot-swapping experiment, how accurately did RAG answer questions about world leaders when the index year matched the question year, and when it did not?",
+        "candidate": "[1] \n\nAccording to this passage, when the index year matches the question year, RAG answers 70% correctly. When the index year does not match the question year, accuracy is low (12%).",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "['Candidate answer omits the specific accuracy values for different leader sets.']"
+      },
+      {
+        "id": "xdoc-001",
+        "question": "BERT's architecture is based on the Transformer encoder from an earlier paper. Which paper is that, and how many layers did that paper's base encoder stack use?",
+        "candidate": "[1]\n\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully connected layers for both the encoder and decoder, shown in Figure 1.\n\nAccording to [1], the encoder is composed of a stack of N = 6 identical layers. Each layer has two sub-layers. The first is a multi-head self-attention mechanism, and the second is a simple, position-wise fully connected feed-forward network.",
+        "expected": 0.0,
+        "judged": 0.0,
+        "agree": true,
+        "reason": "[\"The candidate answer does not mention the specific paper 'Vaswani et al. (2017)'.\"]"
+      }
+    ]
+  }
 }

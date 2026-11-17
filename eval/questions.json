@@ -202,7 +202,7 @@
     {
       "id": "rag-003",
       "question": "How many parameters does the BART-large generator used in RAG have?",
-      "answer": "400M parameters.",
+      "answer": "400M parameters (the paper gives 400M on p.3 and the more precise 406M on p.18).",
       "answer_keys": ["400M"],
       "doc_id": "rag",
       "relevant_pages": [3],

@@ -291,8 +291,45 @@ Three things not to over-read:
   It is still a visible failure mode, plausibly aggravated by k=6 giving the
   model more passages to sift. Not averaged away here.
 - **Absolute correctness is low in both columns.** That is a statement about a
-  3B model on CPU, not about the retrieval pipeline. The judge is also lenient
-  toward incomplete answers, biasing both columns upward equally.
+  3B model on CPU, not about the retrieval pipeline. Both columns were also
+  scored by the v1 judge, which Phase F found too **strict** on real answers
+  (see below), so both are biased downward.
+
+### Phase F — partial answers and a judge that can be trusted (`results/production_partial.json`)
+
+Same retrieval as the tuned config. Two changes:
+
+**1. The answer prompt allows partial answers.** Before, a multi-part question
+with one part missing from the passages got NOT_IN_CONTEXT for the whole thing.
+Now the model answers what it can. Only a reply that *starts with*
+NOT_IN_CONTEXT counts as a refusal (`is_abstention()`).
+
+| | tuned | tuned + partial answers |
+|---|---|---|
+| answerable wrongly refused | 5/26 | **2/26** |
+| unanswerable refused | 2/2 | 2/2 |
+
+The two remaining refusals (attn-006, attn-008) are retrieval misses, so
+refusing is the right behaviour there.
+
+**2. The judge was fixed.** Hand-labelling all 28 answers showed the v1 judge
+agreed with a human on only **15/24** judged real answers, despite 9/10 on the
+synthetic validation set. It was mostly too strict: it failed correct answers
+for true extra detail and for not repeating background the question never
+asked for. The v2 prompt grades only the facts the question asks for and
+reasons before giving a verdict. It agrees on **21/24 (87.5%)**. Details in
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md#judge-reliability-is-measured-not-assumed);
+labels in `eval/judge_labels.json`.
+
+| same 28 answers, scored by | correct |
+|---|---|
+| v1 judge | 12/28 |
+| **v2 judge** | **16/28** |
+| hand labels | 19/28 |
+
+**The 13/28 vs 16/28 comparison is not valid.** The tuned and baseline runs
+above were scored by v1, and the partial-answer run by v2. They need re-judging
+with v2 before any baseline → tuned → partial delta can be reported.
 
 ### Still not measured
 
@@ -318,7 +355,7 @@ pytest                  # includes real index + cross-encoder
 | `tests/test_chunking.py` | config validation, chunk metadata, index-key sharing |
 | `tests/test_retrieval.py` | k contract, BM25, hybrid/rerank assembly |
 | `tests/test_graph.py` | route parsing, node behaviour, recovery transitions |
-| `tests/test_judge.py` | judge JSON extraction, abstention determinism |
+| `tests/test_judge.py` | judge JSON extraction, abstention determinism, citation stripping |
 
 The graph tests run against a scripted fake model, which is the point of the
 rewrite: the interesting behaviour is what happens when the model returns
@@ -339,8 +376,10 @@ something *wrong*, and you cannot get a real model to do that on demand.
   local optimum.
 - **Answer quality is bounded by a 3B local generator.** Measured: even in the
   tuned config, 13 of 26 answerable questions retrieve the right page and still
-  produce a wrong answer. Retrieval metrics are model-independent and transfer;
-  the 0.4643 correctness figure would not.
+  produce a wrong answer (by the v1 judge, which over-counts failures). With
+  partial answers and hand labels it is 7 of 24 answers that were not refusals.
+  Retrieval metrics are model-independent and transfer; the correctness
+  figures would not.
 - **Configuration decisions rest on retrieval metrics.** The end-to-end run
   validated the final choice rather than driving it; the sweeps themselves were
   retrieval-only (~2 s per config versus ~90 s per question).

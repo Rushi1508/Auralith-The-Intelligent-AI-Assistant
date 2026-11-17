@@ -56,9 +56,11 @@ from auralith.providers import (  # noqa: E402
 from auralith.rag import ANSWER_PROMPT, answer_question  # noqa: E402
 from auralith.retrievers import build_retriever, retrieve  # noqa: E402
 from eval.judge import (  # noqa: E402
+    JUDGE_PROMPT,
     JUDGE_VALIDATION_CASES,
     judge_answer,
     keyword_score,
+    load_judge_labels,
     validate_judge,
 )
 from eval.metrics import (  # noqa: E402
@@ -161,6 +163,8 @@ def run_config(
 
     tag = _generation_tag(settings)
     phase = f"gen_{tag}" if generate else "retrieval"
+    # Judge prompt is hashed separately so a judge change re-judges without regenerating.
+    judge_phase = f"judge_{tag}_{hashlib.sha1(JUDGE_PROMPT.encode('utf-8')).hexdigest()[:8]}"
     completed = _load_checkpoint(config, phase) if resume else {}
     if completed:
         log.info("Resuming %s: %d/%d already done", config.name, len(completed), len(questions))
@@ -249,7 +253,7 @@ def run_config(
     # means only one model is in memory at a time.
     if generate and judge_answers:
         unload_model(settings, settings.generator_model)
-        judged = _load_checkpoint(config, f"judge_{tag}") if resume else {}
+        judged = _load_checkpoint(config, judge_phase) if resume else {}
         judge = None
         for i, (row, q) in enumerate(zip(rows, questions), 1):
             if q["id"] in judged:
@@ -286,7 +290,7 @@ def run_config(
             if resume:
                 _append_checkpoint(
                     config,
-                    f"judge_{tag}",
+                    judge_phase,
                     {
                         "id": q["id"],
                         "judge_score": row["judge_score"],
@@ -358,20 +362,26 @@ def main() -> int:
     check_backend(settings)
 
     if args.validate_judge:
-        report = validate_judge(get_judge_model(settings), JUDGE_VALIDATION_CASES)
+        judge = get_judge_model(settings)
+        reports = {
+            "synthetic": validate_judge(judge, JUDGE_VALIDATION_CASES),
+            "real": validate_judge(judge, load_judge_labels()),
+        }
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         out = RESULTS_DIR / "judge_validation.json"
         out.write_text(
-            json.dumps({"judge_model": settings.judge_model, **report}, indent=2),
+            json.dumps({"judge_model": settings.judge_model, **reports}, indent=2),
             encoding="utf-8",
         )
-        print(
-            f"Judge agreement with hand labels: {report['n_agree']}/"
-            f"{report['n_cases']} = {report['agreement']:.1%}"
-        )
-        for d in report["disagreements"]:
-            print(f"  DISAGREE: {d['candidate'][:70]!r}")
-            print(f"    expected={d['expected']} judged={d['judged']} - {d['reason']}")
+        for name, report in reports.items():
+            print(
+                f"Judge agreement ({name}): {report['n_agree']}/"
+                f"{report['n_cases']} = {report['agreement']:.1%}"
+            )
+            for d in report["disagreements"]:
+                label = d["id"] or repr(d["candidate"][:60])
+                print(f"  DISAGREE {label}: expected={d['expected']} judged={d['judged']}")
+                print(f"    {d['reason']}")
         print(f"Written to {out}")
         return 0
 

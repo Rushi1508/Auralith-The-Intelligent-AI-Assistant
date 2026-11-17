@@ -25,8 +25,10 @@ class FakeJudge:
     def __init__(self, *responses: str) -> None:
         self.responses = list(responses) or [""]
         self.calls = 0
+        self.prompts: list[str] = []
 
     def invoke(self, prompt, **_: object) -> FakeResponse:
+        self.prompts.append(prompt)
         idx = min(self.calls, len(self.responses) - 1)
         self.calls += 1
         return FakeResponse(self.responses[idx])
@@ -92,6 +94,11 @@ class TestJudgeAnswer:
         v = judge_answer(ExplodingJudge(), "q", "ref", "cand", retries=0)
         assert v.score == 0.0
         assert v.parse_failed is True
+
+    def test_citation_markers_are_stripped_before_judging(self):
+        judge = FakeJudge('{"correct": true}')
+        judge_answer(judge, "q", "ref", "[2] (source: bert, page 3)\nN = 6 [1][3].")
+        assert "CANDIDATE ANSWER: N = 6 ." in judge.prompts[0]
 
 
 class TestAbstentionIsDeterministic:
