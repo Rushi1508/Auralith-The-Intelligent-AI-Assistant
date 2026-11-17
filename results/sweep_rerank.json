@@ -1,0 +1,333 @@
+{
+  "sweep": "rerank",
+  "rows": [
+    {
+      "name": "prod-norerank",
+      "slug": "recursive_cs500_co100__k6",
+      "describe": "recursive 500/100, k=6, dense-only",
+      "config": {
+        "splitter": "recursive",
+        "chunk_size": 500,
+        "chunk_overlap": 100,
+        "k": 6,
+        "use_bm25": false,
+        "dense_weight": 0.5,
+        "use_rerank": false,
+        "rerank_fetch_k": 20,
+        "use_multiquery": false
+      },
+      "n_chunks": 132,
+      "index_build_seconds": 0.0,
+      "index_from_cache": true,
+      "summary": {
+        "n_questions": 28,
+        "n_answerable": 26,
+        "n_unanswerable": 2,
+        "recall@6": 0.8846,
+        "hit@6": 0.9231,
+        "mrr": 0.6917,
+        "precision@6": 0.2308,
+        "mean_latency_s": 0.2909
+      },
+      "by_type": {
+        "conceptual": {
+          "n_questions": 5,
+          "n_answerable": 5,
+          "n_unanswerable": 0,
+          "recall@6": 0.9,
+          "hit@6": 1.0,
+          "mrr": 0.69,
+          "precision@6": 0.2333,
+          "mean_latency_s": 0.248
+        },
+        "cross-document": {
+          "n_questions": 1,
+          "n_answerable": 1,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 1.0,
+          "precision@6": 0.3333,
+          "mean_latency_s": 0.218
+        },
+        "factoid": {
+          "n_questions": 16,
+          "n_answerable": 16,
+          "n_unanswerable": 0,
+          "recall@6": 0.8438,
+          "hit@6": 0.875,
+          "mrr": 0.6896,
+          "precision@6": 0.2188,
+          "mean_latency_s": 0.3217
+        },
+        "lexical": {
+          "n_questions": 4,
+          "n_answerable": 4,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.625,
+          "precision@6": 0.25,
+          "mean_latency_s": 0.2667
+        },
+        "unanswerable": {
+          "n_questions": 2,
+          "n_answerable": 0,
+          "n_unanswerable": 2,
+          "recall@6": 0.0,
+          "hit@6": 0.0,
+          "mrr": 0.0,
+          "precision@6": 0.0,
+          "mean_latency_s": 0.2355
+        }
+      },
+      "sweep_seconds": 34.12
+    },
+    {
+      "name": "prod-rr10",
+      "slug": "recursive_cs500_co100__k6__rr10",
+      "describe": "recursive 500/100, k=6, dense-only, rerank 10->6",
+      "config": {
+        "splitter": "recursive",
+        "chunk_size": 500,
+        "chunk_overlap": 100,
+        "k": 6,
+        "use_bm25": false,
+        "dense_weight": 0.5,
+        "use_rerank": true,
+        "rerank_fetch_k": 10,
+        "use_multiquery": false
+      },
+      "n_chunks": 132,
+      "index_build_seconds": 0.0,
+      "index_from_cache": true,
+      "summary": {
+        "n_questions": 28,
+        "n_answerable": 26,
+        "n_unanswerable": 2,
+        "recall@6": 0.8462,
+        "hit@6": 0.8462,
+        "mrr": 0.6551,
+        "precision@6": 0.2564,
+        "mean_latency_s": 9.4295
+      },
+      "by_type": {
+        "conceptual": {
+          "n_questions": 5,
+          "n_answerable": 5,
+          "n_unanswerable": 0,
+          "recall@6": 0.8,
+          "hit@6": 0.8,
+          "mrr": 0.8,
+          "precision@6": 0.2,
+          "mean_latency_s": 8.5962
+        },
+        "cross-document": {
+          "n_questions": 1,
+          "n_answerable": 1,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.5,
+          "precision@6": 0.5,
+          "mean_latency_s": 7.495
+        },
+        "factoid": {
+          "n_questions": 16,
+          "n_answerable": 16,
+          "n_unanswerable": 0,
+          "recall@6": 0.8125,
+          "hit@6": 0.8125,
+          "mrr": 0.6146,
+          "precision@6": 0.2708,
+          "mean_latency_s": 10.0689
+        },
+        "lexical": {
+          "n_questions": 4,
+          "n_answerable": 4,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.675,
+          "precision@6": 0.2083,
+          "mean_latency_s": 7.83
+        },
+        "unanswerable": {
+          "n_questions": 2,
+          "n_answerable": 0,
+          "n_unanswerable": 2,
+          "recall@6": 0.0,
+          "hit@6": 0.0,
+          "mrr": 0.0,
+          "precision@6": 0.0,
+          "mean_latency_s": 10.5635
+        }
+      },
+      "sweep_seconds": 296.6
+    },
+    {
+      "name": "prod-rr20",
+      "slug": "recursive_cs500_co100__k6__rr20",
+      "describe": "recursive 500/100, k=6, dense-only, rerank 20->6",
+      "config": {
+        "splitter": "recursive",
+        "chunk_size": 500,
+        "chunk_overlap": 100,
+        "k": 6,
+        "use_bm25": false,
+        "dense_weight": 0.5,
+        "use_rerank": true,
+        "rerank_fetch_k": 20,
+        "use_multiquery": false
+      },
+      "n_chunks": 132,
+      "index_build_seconds": 0.0,
+      "index_from_cache": true,
+      "summary": {
+        "n_questions": 28,
+        "n_answerable": 26,
+        "n_unanswerable": 2,
+        "recall@6": 0.8654,
+        "hit@6": 0.8846,
+        "mrr": 0.7051,
+        "precision@6": 0.2692,
+        "mean_latency_s": 15.9898
+      },
+      "by_type": {
+        "conceptual": {
+          "n_questions": 5,
+          "n_answerable": 5,
+          "n_unanswerable": 0,
+          "recall@6": 0.9,
+          "hit@6": 1.0,
+          "mrr": 1.0,
+          "precision@6": 0.2333,
+          "mean_latency_s": 16.8592
+        },
+        "cross-document": {
+          "n_questions": 1,
+          "n_answerable": 1,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.5,
+          "precision@6": 0.5,
+          "mean_latency_s": 21.489
+        },
+        "factoid": {
+          "n_questions": 16,
+          "n_answerable": 16,
+          "n_unanswerable": 0,
+          "recall@6": 0.8125,
+          "hit@6": 0.8125,
+          "mrr": 0.6146,
+          "precision@6": 0.2812,
+          "mean_latency_s": 15.4084
+        },
+        "lexical": {
+          "n_questions": 4,
+          "n_answerable": 4,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.75,
+          "precision@6": 0.2083,
+          "mean_latency_s": 14.2752
+        },
+        "unanswerable": {
+          "n_questions": 2,
+          "n_answerable": 0,
+          "n_unanswerable": 2,
+          "recall@6": 0.0,
+          "hit@6": 0.0,
+          "mrr": 0.0,
+          "precision@6": 0.0,
+          "mean_latency_s": 19.1475
+        }
+      },
+      "sweep_seconds": 476.08
+    },
+    {
+      "name": "prod-rr30",
+      "slug": "recursive_cs500_co100__k6__rr30",
+      "describe": "recursive 500/100, k=6, dense-only, rerank 30->6",
+      "config": {
+        "splitter": "recursive",
+        "chunk_size": 500,
+        "chunk_overlap": 100,
+        "k": 6,
+        "use_bm25": false,
+        "dense_weight": 0.5,
+        "use_rerank": true,
+        "rerank_fetch_k": 30,
+        "use_multiquery": false
+      },
+      "n_chunks": 132,
+      "index_build_seconds": 0.0,
+      "index_from_cache": true,
+      "summary": {
+        "n_questions": 28,
+        "n_answerable": 26,
+        "n_unanswerable": 2,
+        "recall@6": 0.8654,
+        "hit@6": 0.8846,
+        "mrr": 0.7051,
+        "precision@6": 0.2628,
+        "mean_latency_s": 14.4657
+      },
+      "by_type": {
+        "conceptual": {
+          "n_questions": 5,
+          "n_answerable": 5,
+          "n_unanswerable": 0,
+          "recall@6": 0.9,
+          "hit@6": 1.0,
+          "mrr": 1.0,
+          "precision@6": 0.2333,
+          "mean_latency_s": 14.9856
+        },
+        "cross-document": {
+          "n_questions": 1,
+          "n_answerable": 1,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.5,
+          "precision@6": 0.5,
+          "mean_latency_s": 15.842
+        },
+        "factoid": {
+          "n_questions": 16,
+          "n_answerable": 16,
+          "n_unanswerable": 0,
+          "recall@6": 0.8125,
+          "hit@6": 0.8125,
+          "mrr": 0.6146,
+          "precision@6": 0.2604,
+          "mean_latency_s": 14.8093
+        },
+        "lexical": {
+          "n_questions": 4,
+          "n_answerable": 4,
+          "n_unanswerable": 0,
+          "recall@6": 1.0,
+          "hit@6": 1.0,
+          "mrr": 0.75,
+          "precision@6": 0.25,
+          "mean_latency_s": 13.0985
+        },
+        "unanswerable": {
+          "n_questions": 2,
+          "n_answerable": 0,
+          "n_unanswerable": 2,
+          "recall@6": 0.0,
+          "hit@6": 0.0,
+          "mrr": 0.0,
+          "precision@6": 0.0,
+          "mean_latency_s": 12.464
+        }
+      },
+      "sweep_seconds": 443.64
+    }
+  ]
+}
