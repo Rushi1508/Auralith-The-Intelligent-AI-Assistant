@@ -267,14 +267,29 @@ pipeline puts the correct page in front of the model for 24 of 26 answerable
 questions, so **the binding constraint is no longer retrieval — it is the 3B
 generator's ability to state every required fact from a passage it was given.**
 
+**Confidence intervals** (`results/comparison_ci.md`, paired bootstrap,
+`python eval/compare.py results/baseline.json results/production.json`):
+
+| metric | delta | 95% CI |
+|---|---|---|
+| recall@k | +0.2692 | [+0.1154, +0.4423] |
+| MRR | +0.1821 | [+0.0346, +0.3321] |
+| answer_correctness (28) | +0.1071 | [−0.1071, +0.3214] |
+| false_abstention_rate (26) | +0.0769 | [−0.0769, +0.2308] |
+
+The retrieval gains clear zero. **The answer-correctness gain does not.**
+10 → 13 of 28 is within resampling noise. Retrieval improved measurably. That
+it improved end-to-end answers is plausible but not shown on 28 questions.
+
 Three things not to over-read:
 
 - **`abstention_accuracy` 0.50 → 1.00 rests on n=2.** That is one question
   flipping. Reported because it was measured; it is not evidence on its own.
 - **`false_abstention_rate` got worse** (3 → 5 of 26). The tuned config refuses
   more questions it has evidence for; three of the five had the correct passage
-  retrieved. A real regression, plausibly aggravated by k=6 giving the model
-  more passages to sift. Not averaged away here.
+  retrieved. The interval includes zero, so this is not a measured regression.
+  It is still a visible failure mode, plausibly aggravated by k=6 giving the
+  model more passages to sift. Not averaged away here.
 - **Absolute correctness is low in both columns.** That is a statement about a
   3B model on CPU, not about the retrieval pipeline. The judge is also lenient
   toward incomplete answers, biasing both columns upward equally.

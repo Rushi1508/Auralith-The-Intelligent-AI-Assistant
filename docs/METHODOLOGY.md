@@ -164,10 +164,13 @@ These are real and an interviewer should be able to find them stated here
 rather than have to extract them.
 
 1. **28 questions is a small sample.** One question is worth ~3.8 percentage
-   points of recall. Differences below roughly 0.04 are not distinguishable from
-   noise, and no confidence intervals are computed. The Phase B chunking result
-   (+0.19) is far outside that band; the Phase C hybrid result (+0.0045) is well
-   inside it, which is exactly why it was rejected.
+   points of recall. `eval/compare.py` computes paired bootstrap 95% intervals
+   between two runs (`results/comparison_ci.md`). They are wider than the
+   earlier "~0.04" rule of thumb suggested. The baseline→tuned answer-correctness
+   delta of +0.107 has an interval spanning zero. Retrieval deltas of +0.18 to
+   +0.27 clear zero. The Phase C hybrid result (+0.0045) is far inside noise,
+   which is exactly why it was rejected. Sweeps only store aggregates, so they
+   have no intervals.
 
 2. **The sweep is sequential and greedy, not a grid.** Chunking was optimised
    first, then k on the chunking winner, then Phase C features on that. Chunk

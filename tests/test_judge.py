@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import pytest
 
+from auralith.rag import is_abstention
 from eval.judge import _extract_json, judge_answer, keyword_score
 
 
@@ -141,3 +142,28 @@ class TestKeywordScore:
     @pytest.mark.parametrize("answer", ["", None])
     def test_empty_answer_scores_zero(self, answer):
         assert keyword_score(answer, ["6"]) == 0.0
+
+
+class TestPartialAnswersAreNotAbstentions:
+    """The prompt lets the model answer part of a multi-part question and flag
+    the missing part. Only a reply that leads with the token is a refusal."""
+
+    @pytest.mark.parametrize(
+        "text",
+        ["NOT_IN_CONTEXT", "  not_in_context", "**NOT_IN_CONTEXT**", "\nNOT_IN_CONTEXT."],
+    )
+    def test_leading_token_is_abstention(self, text):
+        assert is_abstention(text)
+
+    def test_partial_answer_mentioning_token_is_not_abstention(self):
+        assert not is_abstention(
+            "Dec 2018 dump, 100-word chunks [2]. The document count is NOT_IN_CONTEXT."
+        )
+
+    def test_partial_answer_goes_to_the_judge(self):
+        judge = FakeJudge('{"correct": true, "reason": "ok"}')
+        v = judge_answer(
+            judge, "q", "Adam, b1=0.9", "Adam [1]. Epsilon is NOT_IN_CONTEXT.", answerable=True
+        )
+        assert judge.calls == 1
+        assert v.score == 1.0

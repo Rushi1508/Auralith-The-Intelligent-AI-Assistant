@@ -15,8 +15,10 @@ from langchain_core.documents import Document
 from eval.metrics import (
     RelevanceLabel,
     aggregate,
+    bootstrap_ci,
     hit_at_k,
     is_relevant,
+    paired_bootstrap_ci,
     precision_at_k,
     recall_at_k,
     reciprocal_rank,
@@ -231,3 +233,33 @@ class TestAggregate:
     def test_empty_input_does_not_crash(self):
         out = aggregate([], k=4)
         assert out["n_questions"] == 0
+
+
+class TestBootstrap:
+    def test_constant_values_give_zero_width_interval(self):
+        assert bootstrap_ci([0.5] * 20) == (0.5, 0.5)
+
+    def test_interval_contains_the_mean(self):
+        vals = [1.0] * 10 + [0.0] * 10
+        lo, hi = bootstrap_ci(vals)
+        assert lo < 0.5 < hi
+
+    def test_seeded_and_reproducible(self):
+        vals = [0.0, 1.0, 1.0, 0.0, 1.0, 0.5, 0.25]
+        assert bootstrap_ci(vals) == bootstrap_ci(vals)
+
+    def test_paired_identical_runs_have_zero_delta(self):
+        """Pairing is the point: same values in both runs means no difference,
+        however noisy the values are across questions."""
+        vals = [0.0, 1.0, 0.0, 1.0, 1.0, 0.0]
+        assert paired_bootstrap_ci(vals, vals) == (0.0, 0.0)
+
+    def test_paired_consistent_gain_excludes_zero(self):
+        a = [0.0, 0.2, 0.5, 0.1, 0.7, 0.3] * 4
+        b = [x + 0.2 for x in a]
+        lo, hi = paired_bootstrap_ci(a, b)
+        assert lo > 0
+
+    def test_paired_rejects_unequal_lengths(self):
+        with pytest.raises(ValueError):
+            paired_bootstrap_ci([1.0], [1.0, 0.0])

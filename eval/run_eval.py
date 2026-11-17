@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import platform
@@ -52,7 +53,7 @@ from auralith.providers import (  # noqa: E402
     get_judge_model,
     unload_model,
 )
-from auralith.rag import answer_question  # noqa: E402
+from auralith.rag import ANSWER_PROMPT, answer_question  # noqa: E402
 from auralith.retrievers import build_retriever, retrieve  # noqa: E402
 from eval.judge import (  # noqa: E402
     JUDGE_VALIDATION_CASES,
@@ -75,6 +76,18 @@ log = logging.getLogger("eval")
 
 QUESTIONS_PATH = Path(__file__).resolve().parent / "questions.json"
 CHECKPOINT_DIR = RESULTS_DIR / ".checkpoints"
+
+
+def _generation_tag(settings: Settings) -> str:
+    """Short hash of everything besides retrieval that shapes an answer.
+
+    Checkpoints were once keyed on the retrieval config alone, so changing the
+    prompt or the generator and re-running silently replayed the old answers
+    and reported identical numbers.
+    """
+    text = ANSWER_PROMPT.messages[0].prompt.template
+    key = f"{text}|{settings.generator_model}|{settings.judge_model}"
+    return hashlib.sha1(key.encode("utf-8")).hexdigest()[:8]
 
 
 def _checkpoint_path(config: RetrievalConfig, phase: str) -> Path:
@@ -146,7 +159,8 @@ def run_config(
     bm25_chunks = load_chunks_for_bm25(docs, config) if config.use_bm25 else None
     retriever = build_retriever(store, config, settings, bm25_chunks=bm25_chunks)
 
-    phase = "gen" if generate else "retrieval"
+    tag = _generation_tag(settings)
+    phase = f"gen_{tag}" if generate else "retrieval"
     completed = _load_checkpoint(config, phase) if resume else {}
     if completed:
         log.info("Resuming %s: %d/%d already done", config.name, len(completed), len(questions))
@@ -235,7 +249,7 @@ def run_config(
     # means only one model is in memory at a time.
     if generate and judge_answers:
         unload_model(settings, settings.generator_model)
-        judged = _load_checkpoint(config, "judge") if resume else {}
+        judged = _load_checkpoint(config, f"judge_{tag}") if resume else {}
         judge = None
         for i, (row, q) in enumerate(zip(rows, questions), 1):
             if q["id"] in judged:
@@ -272,7 +286,7 @@ def run_config(
             if resume:
                 _append_checkpoint(
                     config,
-                    "judge",
+                    f"judge_{tag}",
                     {
                         "id": q["id"],
                         "judge_score": row["judge_score"],

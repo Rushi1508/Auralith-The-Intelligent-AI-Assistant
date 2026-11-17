@@ -15,7 +15,7 @@ Design choices, each of which an interviewer can reasonably push on:
    correctly abstains look "correct" on questions that had a real answer.
 
 3. **Abstention is scored deterministically, not by the judge.** Whether the
-   output contains NOT_IN_CONTEXT is a string check. Handing that to a model
+   output leads with NOT_IN_CONTEXT is a string check. Handing that to a model
    would add noise to the one part of the pipeline that has no ambiguity.
 
 4. **A deterministic keyword check runs alongside.** `answer_keys` in the eval
@@ -37,7 +37,7 @@ from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 
-from auralith.rag import NOT_IN_CONTEXT
+from auralith.rag import NOT_IN_CONTEXT, is_abstention
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ def judge_answer(
 ) -> JudgeVerdict:
     """Score one answer. Never raises."""
     # Abstention: fully deterministic, no model needed.
-    abstained = NOT_IN_CONTEXT in (candidate or "").upper()
+    abstained = is_abstention(candidate)
     if not answerable:
         return JudgeVerdict(
             score=1.0 if abstained else 0.0,

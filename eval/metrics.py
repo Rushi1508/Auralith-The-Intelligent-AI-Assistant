@@ -24,6 +24,7 @@ if anything conservative, not inflated.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
@@ -176,3 +177,49 @@ def by_type(per_question: Sequence[dict[str, Any]], k: int) -> dict[str, dict]:
         t: aggregate([r for r in per_question if r.get("type") == t], k)
         for t in types
     }
+
+
+def bootstrap_ci(
+    values: Sequence[float],
+    n_resamples: int = 10_000,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for the mean of `values`.
+
+    Resamples questions with replacement. On 26-28 questions the interval is
+    wide, and that is the point: it puts a number on "one question is worth
+    ~3.8 points" instead of leaving it as a rule of thumb. Seeded, so the
+    committed intervals are reproducible.
+    """
+    vals = list(values)
+    if not vals:
+        return (0.0, 0.0)
+    rng = random.Random(seed)
+    n = len(vals)
+    means = sorted(sum(rng.choices(vals, k=n)) / n for _ in range(n_resamples))
+    lo = means[int((alpha / 2) * n_resamples)]
+    hi = means[min(n_resamples - 1, int((1 - alpha / 2) * n_resamples))]
+    return (round(lo, 4), round(hi, 4))
+
+
+def paired_bootstrap_ci(
+    a: Sequence[float],
+    b: Sequence[float],
+    n_resamples: int = 10_000,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> tuple[float, float]:
+    """Bootstrap CI for mean(b - a) over paired per-question values.
+
+    Two configs answer the *same* questions, so the comparison must resample
+    question indices once and apply them to both columns. Bootstrapping each
+    column independently throws away the pairing and gives intervals that are
+    far too wide - "easy" questions are easy for both configs.
+
+    If the interval excludes 0, the difference is unlikely to be one or two
+    questions flipping by chance.
+    """
+    if len(a) != len(b):
+        raise ValueError(f"paired samples differ in length: {len(a)} vs {len(b)}")
+    return bootstrap_ci([y - x for x, y in zip(a, b)], n_resamples, alpha, seed)

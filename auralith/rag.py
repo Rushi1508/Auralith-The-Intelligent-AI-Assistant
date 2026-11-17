@@ -38,9 +38,12 @@ ANSWER_PROMPT = ChatPromptTemplate.from_template(
 Answer the question using ONLY the numbered context passages below. Follow these rules:
 - Cite the passage numbers you used, like [1] or [2][3].
 - Be specific. If the answer is a number, a name, or a term, state it exactly.
-- If the passages do not contain the answer, reply exactly:
+- If the question has several parts, answer every part the passages support.
+  If a part is not covered, say which part is missing - but still answer the rest.
+- Only if the passages contain nothing that answers any part of the question,
+  reply exactly:
   NOT_IN_CONTEXT
-  Do not guess and do not use outside knowledge.
+- Do not guess and do not use outside knowledge.
 
 Context passages:
 {context}
@@ -51,6 +54,18 @@ Answer:"""
 )
 
 NOT_IN_CONTEXT = "NOT_IN_CONTEXT"
+
+
+def is_abstention(text: str) -> bool:
+    """True if the answer is a refusal, not a partial answer.
+
+    The prompt allows answering part of a multi-part question and flagging the
+    missing part, so the token can appear mid-answer. Only a reply that *leads*
+    with it is a refusal. A substring check would score "Dec 2018 dump, 100-word
+    chunks; the document count is NOT_IN_CONTEXT" as a refusal and throw away
+    two correct facts.
+    """
+    return (text or "").lstrip(" *_`>#\n\t").upper().startswith(NOT_IN_CONTEXT)
 
 
 @dataclass
@@ -128,5 +143,5 @@ def answer_question(
         passages=passages,
         latency_seconds=round(time.perf_counter() - started, 3),
         config_slug=config.slug,
-        abstained=NOT_IN_CONTEXT in text.upper(),
+        abstained=is_abstention(text),
     )
