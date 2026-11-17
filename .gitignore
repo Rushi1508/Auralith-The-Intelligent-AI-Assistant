@@ -1,0 +1,31 @@
+# Secrets - the whole point of moving the API key out of source
+.env
+.env.*
+!.env.example
+
+# Evaluation corpus: fetched and checksum-verified, never committed.
+# See eval/corpus/fetch_corpus.py
+eval/corpus/*.pdf
+
+# Persisted vector indexes; rebuilt from the corpus on demand
+.chroma/
+
+# Scratch outputs from interactive runs. Committed results live in results/
+# and are named explicitly.
+results/_*.json
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+.venv/
+venv/
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

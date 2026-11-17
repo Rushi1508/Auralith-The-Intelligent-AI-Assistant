@@ -1,0 +1,98 @@
+{
+  "judge_model": "qwen2.5:7b",
+  "n_cases": 10,
+  "n_agree": 9,
+  "agreement": 0.9,
+  "disagreements": [
+    {
+      "question": "What optimizer did the Transformer authors use?",
+      "candidate": "They used the Adam optimizer.",
+      "expected": 0.0,
+      "judged": 1.0,
+      "agree": false,
+      "reason": "The candidate answer conveys the same factual content as the reference answer."
+    }
+  ],
+  "cases": [
+    {
+      "question": "How many identical layers are stacked in the Transformer encoder?",
+      "candidate": "The encoder has 6 identical layers.",
+      "expected": 1.0,
+      "judged": 1.0,
+      "agree": true,
+      "reason": "Same factual content."
+    },
+    {
+      "question": "How many identical layers are stacked in the Transformer encoder?",
+      "candidate": "The encoder is composed of 12 identical layers.",
+      "expected": 0.0,
+      "judged": 0.0,
+      "agree": true,
+      "reason": "Incorrect number of layers."
+    },
+    {
+      "question": "How many identical layers are stacked in the Transformer encoder?",
+      "candidate": "N = 6.",
+      "expected": 1.0,
+      "judged": 1.0,
+      "agree": true,
+      "reason": "The candidate answer conveys the same factual content as the reference."
+    },
+    {
+      "question": "What percentage of WordPiece tokens does BERT mask?",
+      "candidate": "BERT masks about one in seven tokens at random.",
+      "expected": 1.0,
+      "judged": 1.0,
+      "agree": true,
+      "reason": "Both answers convey the same fact with different wording."
+    },
+    {
+      "question": "What percentage of WordPiece tokens does BERT mask?",
+      "candidate": "15 tokens per sequence are masked.",
+      "expected": 0.0,
+      "judged": 0.0,
+      "agree": true,
+      "reason": "Percentage is missing."
+    },
+    {
+      "question": "How many parameters does BART-large have?",
+      "candidate": "BART-large has 400 million parameters, and was pre-trained with a denoising objective.",
+      "expected": 1.0,
+      "judged": 1.0,
+      "agree": true,
+      "reason": "Both answers provide the same factual content."
+    },
+    {
+      "question": "How many parameters does BART-large have?",
+      "candidate": "BART-large has 400 million parameters and 24 encoder layers trained on the December 2018 Wikipedia dump.",
+      "expected": 0.0,
+      "judged": 0.0,
+      "agree": true,
+      "reason": "Extra incorrect detail about encoder layers and training data."
+    },
+    {
+      "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
+      "candidate": "NOT_IN_CONTEXT",
+      "expected": 1.0,
+      "judged": 1.0,
+      "agree": true,
+      "reason": "Correctly abstained."
+    },
+    {
+      "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-Romanian?",
+      "candidate": "The Transformer achieved 29.1 BLEU on English-to-Romanian.",
+      "expected": 0.0,
+      "judged": 0.0,
+      "agree": true,
+      "reason": "Should have abstained."
+    },
+    {
+      "question": "What optimizer did the Transformer authors use?",
+      "candidate": "They used the Adam optimizer.",
+      "expected": 0.0,
+      "judged": 1.0,
+      "agree": false,
+      "reason": "The candidate answer conveys the same factual content as the reference answer."
+    }
+  ]
+}

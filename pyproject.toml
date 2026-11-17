@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auralith"
+version = "0.2.0"
+description = "Multi-modal document assistant with an evaluated retrieval pipeline"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.setuptools]
+packages = ["auralith", "auralith.graph", "auralith.tools", "ui", "eval"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+markers = [
+    "corpus: needs the fetched PDF corpus (python eval/corpus/fetch_corpus.py)",
+    "slow: loads a real ML model; minutes not milliseconds",
+    "ollama: needs a running Ollama daemon",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:langchain_community.*",
+    "ignore::DeprecationWarning:chromadb.*",
+]
+
+[tool.ruff]
+line-length = 90
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    # Broad excepts are deliberate at pipeline boundaries: one bad question or
+    # one model timeout must cost a single data point, not an entire sweep.
+    # Every occurrence is paired with a log line and a captured error field.
+    "BLE001",
+]

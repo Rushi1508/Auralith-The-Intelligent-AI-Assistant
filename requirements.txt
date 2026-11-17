@@ -1,0 +1,71 @@
+# Auralith dependencies.
+#
+# Every pin below is a package that is actually imported by this repository,
+# at the version the committed results in results/ were produced with.
+#
+# The inherited `requirements (1).txt` did not install: it pinned
+# langchain==0.32.0 (a version that has never been published), pinned the
+# pre-1.0 openai==0.27.0 SDK against code importing langchain_openai, and
+# omitted six packages the code imported (langchain-openai, langchain-community,
+# langchain-core, ollama, psutil, pyautogui). It was also named with a browser
+# download suffix while the README told you to install `requirements.txt`.
+#
+# Install:  pip install -r requirements.txt
+# Then:     python eval/corpus/fetch_corpus.py
+
+# --- App ---
+streamlit==1.61.1
+
+# --- LangChain ---
+# In LangChain 1.x the `langchain` package was slimmed to agent primitives and
+# the classic retriever compositions moved out. EnsembleRetriever,
+# ContextualCompressionRetriever, MultiQueryRetriever and CrossEncoderReranker
+# all live in langchain-classic now; importing them from langchain.retrievers
+# raises ModuleNotFoundError on 1.x.
+langchain==1.3.15
+langchain-core==1.5.5
+langchain-classic==1.0.8
+langchain-text-splitters==1.1.2
+langchain-chroma==1.1.0
+langchain-huggingface==1.2.2
+langchain-ollama==1.1.0
+# Provides PyPDFLoader, BM25Retriever and HuggingFaceCrossEncoder. Upstream has
+# announced this package is being sunset; the imports emit a DeprecationWarning
+# and will need migrating to standalone integration packages.
+langchain-community==0.4.2
+
+# --- Agent graph ---
+langgraph==1.2.11
+
+# --- Vector store and retrieval ---
+chromadb==1.5.9
+rank-bm25==0.2.2          # BM25Retriever's scoring backend
+sentence-transformers==5.7.0   # embeddings + cross-encoder reranking
+torch==2.12.0
+transformers==5.13.0
+
+# --- Documents ---
+pypdf==6.16.1
+tiktoken==0.13.0          # token-length function for the splitters
+
+# --- Local models ---
+ollama==0.6.2
+
+# --- Tools ---
+ddgs==9.15.0              # keyless web search backend
+
+# --- Config ---
+python-dotenv==1.2.2
+
+# --- Tests ---
+pytest==9.1.1
+
+# --- Optional ---------------------------------------------------------------
+# Hosted provider (only needed when AURALITH_PROVIDER=openai):
+#   langchain-openai>=1.0
+# Better web search (only needed when AURALITH_SEARCH_BACKEND=tavily):
+#   tavily-python>=0.5
+# Voice input in Chat mode. PyAudio needs a system-level PortAudio install and
+# is left optional so a headless clone still runs:
+#   SpeechRecognition>=3.10
+#   pyaudio>=0.2.14
