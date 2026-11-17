@@ -1,0 +1,8 @@
+
+streamlit==1.22.0
+openai==0.27.0
+langchain==0.32.0
+pypdf==3.10.0
+speechrecognition==3.8.1
+chromadb==0.4.5
+tiktoken==0.2.0
