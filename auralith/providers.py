@@ -96,10 +96,9 @@ def get_chat_model(settings: Settings, model: str | None = None) -> BaseChatMode
         model=name,
         temperature=settings.temperature,
         base_url=settings.ollama_base_url,
-        # num_predict caps generation length. Without it a small model will
-        # occasionally ramble for thousands of tokens on an ambiguous prompt
-        # and stall a sweep.
-        num_predict=1024,
+        # See Settings.max_output_tokens. Uniform across configs, so it cannot
+        # bias a comparison.
+        num_predict=settings.max_output_tokens,
     )
 
 

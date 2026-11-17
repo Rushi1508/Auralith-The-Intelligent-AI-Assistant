@@ -50,6 +50,16 @@ class Settings:
     # Judge and router both need determinism for a reproducible eval.
     temperature: float = 0.0
     request_timeout: int = 120
+    max_output_tokens: int = 512
+    """Generation cap.
+
+    Applied uniformly to every config, so it cannot bias a comparison. Set from
+    the data rather than by feel: the longest reference answer in the eval set
+    is two sentences, so 512 tokens is already several times more headroom than
+    any correct answer needs. Its real job is to stop a small model from
+    rambling for a thousand tokens on an ambiguous prompt and stalling a run -
+    on CPU that is the difference between a 30-minute and a 70-minute pass.
+    """
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -67,6 +77,7 @@ class Settings:
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             temperature=float(os.getenv("AURALITH_TEMPERATURE", "0.0")),
             request_timeout=int(os.getenv("AURALITH_TIMEOUT", "120")),
+            max_output_tokens=int(os.getenv("AURALITH_MAX_OUTPUT_TOKENS", "512")),
         )
 
 
@@ -194,10 +205,36 @@ BASELINE_CONFIG = RetrievalConfig(
 # cite the results file that justified it, so `git log -p auralith/config.py`
 # reads as the decision history for the pipeline.
 #
-# Phase A: identical to the baseline. Nothing has been measured yet, so there is
-# no evidence on which to choose anything else.
-PRODUCTION_CONFIG = BASELINE_CONFIG.with_(
+# Phase B (results/sweep_chunking.md, results/sweep_k.md):
+#
+#   chunking, k held at 4        recall@4     MRR
+#     character 7500/100 (old)     0.6154   0.5096   <- 50 chunks; never splits
+#     recursive 500/50             0.6346   0.5192
+#     recursive 500/100            0.8077   0.6763   <- winner
+#     recursive 1000/100           0.5000   0.4071   <- worse than doing nothing
+#     recursive 1000/200           0.6731   0.5801
+#     recursive 1500/150           0.6154   0.5096   <- 50 chunks; never splits
+#
+#   k, on recursive 500/100      recall@k   hit@k     MRR   prec@k
+#     k=4                          0.8077  0.8462  0.6763   0.2692
+#     k=6                          0.8846  0.9231  0.6917   0.2308   <- winner
+#     k=8                          0.9038  0.9231  0.6917   0.1971
+#     k=10                         0.9038  0.9231  0.6917   0.1923
+#
+# k=6 rather than k=8: hit@k and MRR both reach their ceiling at 6. The extra
+# 0.019 recall at k=8 comes from one multi-page question and costs 33% more
+# context while dropping precision 0.231 -> 0.197. recall@k rises with k by
+# construction, so it is not a like-for-like column across these rows.
+#
+# Phase C left everything off by default:
+#   hybrid BM25 - rejected, +0.0045 MRR (inside noise). results/sweep_hybrid.md
+#   reranking   - trade-off, not a win.                  results/sweep_rerank.md
+PRODUCTION_CONFIG = RetrievalConfig(
     name="production",
-    notes="Phase A: unchanged from baseline; no sweep evidence yet.",
-    tags=("production",),
+    splitter="recursive",
+    chunk_size=500,
+    chunk_overlap=100,
+    k=6,
+    notes="Phase B winner. See results/sweep_chunking.md and results/sweep_k.md.",
+    tags=("production", "phase-b"),
 )

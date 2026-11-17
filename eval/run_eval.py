@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from auralith.config import (  # noqa: E402
     BASELINE_CONFIG,
     CORPUS_DIR,
+    PRODUCTION_CONFIG,
     RESULTS_DIR,
     RetrievalConfig,
     Settings,
@@ -73,6 +74,50 @@ from eval.metrics import (  # noqa: E402
 log = logging.getLogger("eval")
 
 QUESTIONS_PATH = Path(__file__).resolve().parent / "questions.json"
+CHECKPOINT_DIR = RESULTS_DIR / ".checkpoints"
+
+
+def _checkpoint_path(config: RetrievalConfig, phase: str) -> Path:
+    return CHECKPOINT_DIR / f"{config.slug}__{phase}.jsonl"
+
+
+def _load_checkpoint(config: RetrievalConfig, phase: str) -> dict[str, dict[str, Any]]:
+    """Read completed rows for one phase, keyed by question id.
+
+    A full end-to-end pass costs ~110s per question for generation alone, so a
+    28-question run is over an hour. Anything that long needs to survive being
+    interrupted, otherwise a single stop discards the whole run - which is
+    exactly what happened twice before this existed.
+
+    Corrupt trailing lines are skipped rather than fatal: a run killed
+    mid-write leaves a partial final line, and losing one question is much
+    better than losing the file.
+    """
+    path = _checkpoint_path(config, phase)
+    if not path.exists():
+        return {}
+    done: dict[str, dict[str, Any]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            log.warning("Skipping corrupt checkpoint line in %s", path.name)
+            continue
+        done[row["id"]] = row
+    return done
+
+
+def _append_checkpoint(
+    config: RetrievalConfig, phase: str, row: dict[str, Any]
+) -> None:
+    path = _checkpoint_path(config, phase)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row) + "\n")
+        fh.flush()
 
 
 def load_questions(path: Path = QUESTIONS_PATH) -> list[dict[str, Any]]:
@@ -87,16 +132,31 @@ def run_config(
     generate: bool = True,
     judge_answers: bool = True,
     corpus_dir: Path = CORPUS_DIR,
+    resume: bool = True,
 ) -> dict[str, Any]:
-    """Evaluate one config. Returns a fully self-describing result dict."""
+    """Evaluate one config. Returns a fully self-describing result dict.
+
+    With `resume=True` (default) each completed question is checkpointed to
+    results/.checkpoints/ and re-runs skip work already done, so an interrupted
+    hour-long evaluation continues instead of starting over.
+    """
     started = time.perf_counter()
     docs = load_corpus(corpus_dir)
     store, build_report = build_index(docs, config, settings)
     bm25_chunks = load_chunks_for_bm25(docs, config) if config.use_bm25 else None
     retriever = build_retriever(store, config, settings, bm25_chunks=bm25_chunks)
 
+    phase = "gen" if generate else "retrieval"
+    completed = _load_checkpoint(config, phase) if resume else {}
+    if completed:
+        log.info("Resuming %s: %d/%d already done", config.name, len(completed), len(questions))
+
     rows: list[dict[str, Any]] = []
     for i, q in enumerate(questions, 1):
+        if q["id"] in completed:
+            rows.append(completed[q["id"]])
+            continue
+
         label = RelevanceLabel.from_question(q)
         row: dict[str, Any] = {
             "id": q["id"],
@@ -154,13 +214,16 @@ def run_config(
         )
 
         rows.append(row)
+        if resume:
+            _append_checkpoint(config, phase, row)
         log.info(
-            "[%2d/%d] %-11s recall=%.2f rr=%.2f",
+            "[%2d/%d] %-11s recall=%.2f rr=%.2f %.0fs",
             i,
             len(questions),
             q["id"],
             row["recall"],
             row["reciprocal_rank"],
+            row.get("latency_seconds", 0.0),
         )
 
     # --- Judging runs as a separate pass, after all generation is finished ---
@@ -172,8 +235,27 @@ def run_config(
     # means only one model is in memory at a time.
     if generate and judge_answers:
         unload_model(settings, settings.generator_model)
-        judge = get_judge_model(settings)
+        judged = _load_checkpoint(config, "judge") if resume else {}
+        judge = None
         for i, (row, q) in enumerate(zip(rows, questions), 1):
+            if q["id"] in judged:
+                row.update(
+                    {
+                        key: judged[q["id"]][key]
+                        for key in (
+                            "judge_score",
+                            "judge_reason",
+                            "judge_parse_failed",
+                            "keyword_score",
+                        )
+                        if key in judged[q["id"]]
+                    }
+                )
+                continue
+            # Constructed lazily so a fully-resumed judge phase never loads the
+            # 5 GB judge model at all.
+            if judge is None:
+                judge = get_judge_model(settings)
             verdict = judge_answer(
                 judge,
                 q["question"],
@@ -187,10 +269,23 @@ def run_config(
             row["keyword_score"] = keyword_score(
                 row.get("answer", ""), q.get("answer_keys", [])
             )
+            if resume:
+                _append_checkpoint(
+                    config,
+                    "judge",
+                    {
+                        "id": q["id"],
+                        "judge_score": row["judge_score"],
+                        "judge_reason": row["judge_reason"],
+                        "judge_parse_failed": row["judge_parse_failed"],
+                        "keyword_score": row["keyword_score"],
+                    },
+                )
             log.info(
                 "[judge %2d/%d] %-11s score=%.0f", i, len(rows), q["id"], verdict.score
             )
-        unload_model(settings, settings.judge_model)
+        if judge is not None:
+            unload_model(settings, settings.judge_model)
 
     summary = aggregate(rows, config.k)
     return {
@@ -266,12 +361,13 @@ def main() -> int:
         print(f"Written to {out}")
         return 0
 
-    if args.config != "baseline":
+    named = {"baseline": BASELINE_CONFIG, "production": PRODUCTION_CONFIG}
+    if args.config not in named:
         raise SystemExit(
-            f"Unknown config {args.config!r}. Only 'baseline' is defined here; "
-            "sweeps are driven by eval/sweep.py."
+            f"Unknown config {args.config!r}. Choose from {sorted(named)}; "
+            "arbitrary sweeps are driven by eval/sweep.py."
         )
-    config = BASELINE_CONFIG
+    config = named[args.config]
 
     questions = load_questions()
     print(f"Config:    {config.name} - {config.describe()}")
