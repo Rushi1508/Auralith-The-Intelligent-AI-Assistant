@@ -233,31 +233,60 @@ exactly where paraphrase matching matters and adds least where the answer is a
 bare number the bi-encoder already located. Conceptual is 5 of 26 questions,
 which is why a perfect slice only moves the aggregate a little.
 
-### What is not measured
+### End-to-end: baseline vs tuned (`results/comparison.md`)
 
-Stated here rather than left for someone to discover.
+Full runs over all 28 questions — no subset. `results/baseline.json`,
+`results/production.json`. 56 generations and 56 judge calls with **0 judge
+parse failures and 0 generation errors**.
 
-**End-to-end answer correctness has not been run to completion.** Every
-configuration decision above was made on retrieval metrics, which are
-model-free, deterministic, and take ~2 seconds per config. The generation-side
-number would take ~110 s per question — over an hour per configuration on a 3B
-model on CPU — and was not completed.
+| metric | baseline | tuned | delta |
+|---|---|---|---|
+| recall@k | 0.6154 | 0.8846 | +0.2692 |
+| hit@k | 0.6538 | 0.9231 | +0.2693 |
+| MRR | 0.5096 | 0.6917 | +0.1821 |
+| **answer_correctness** (28) | **0.3571** | **0.4643** | **+0.1072** |
+| answer_correctness (26 answerable) | 0.3462 | 0.4231 | +0.0769 |
+| abstention_accuracy (2 unanswerable) | 0.5000 | 1.0000 | +0.5000 |
+| false_abstention_rate (26 answerable) | 0.1154 | 0.1923 | +0.0769 |
+| keyword_score | 0.5536 | 0.6190 | +0.0654 |
+| mean latency / question | 84.1 s | 94.7 s | +10.6 s |
 
-That is a real gap with a specific consequence: **the reranking trade-off is
-unresolved.** MRR and precision improve while recall drops, and nothing in the
-retrieval metrics can adjudicate that. It needs answer correctness. Reranking
-is therefore implemented, measured, and left **off** rather than switched on
-from a number that does not settle the question.
+Counts, since the denominators are small: correct **10/28 → 13/28**;
+answerable correct 9/26 → 11/26; unanswerable refused 1/2 → 2/2; answerable
+wrongly refused 3/26 → 5/26.
 
-The harness supports it fully — `python eval/run_eval.py --config production`
-produces `answer_correctness`, `abstention_accuracy` and `false_abstention_rate`,
-with per-question checkpointing so an interrupted run resumes. The judge behind
-it is validated at 9/10 against hand labels. It just has not been run to the
-end.
+**The most useful result is where the failures moved:**
 
-**Query expansion (`MultiQueryRetriever`) has no number.** It is implemented and
-config-gated in `auralith/retrievers.py` but was not swept. It is the one Phase C
-feature without evidence either way, and it is off.
+| | baseline | tuned |
+|---|---|---|
+| retrieval missed the page entirely | 9/26 | **2/26** |
+| retrieval found it, answer still wrong | 9/26 | **13/26** |
+
+Retrieval failures fell **78%**, while generation-side failures rose. The tuned
+pipeline puts the correct page in front of the model for 24 of 26 answerable
+questions, so **the binding constraint is no longer retrieval — it is the 3B
+generator's ability to state every required fact from a passage it was given.**
+
+Three things not to over-read:
+
+- **`abstention_accuracy` 0.50 → 1.00 rests on n=2.** That is one question
+  flipping. Reported because it was measured; it is not evidence on its own.
+- **`false_abstention_rate` got worse** (3 → 5 of 26). The tuned config refuses
+  more questions it has evidence for; three of the five had the correct passage
+  retrieved. A real regression, plausibly aggravated by k=6 giving the model
+  more passages to sift. Not averaged away here.
+- **Absolute correctness is low in both columns.** That is a statement about a
+  3B model on CPU, not about the retrieval pipeline. The judge is also lenient
+  toward incomplete answers, biasing both columns upward equally.
+
+### Still not measured
+
+**The reranking trade-off remains unresolved.** Reranking improves MRR and
+precision while costing recall. Settling it needs a third end-to-end run
+(`production_rerank`), which was not done — so reranking stays **off**.
+
+**Query expansion (`MultiQueryRetriever`) has no number.** Implemented and
+config-gated in `auralith/retrievers.py`, never swept, off.
 
 ---
 
@@ -293,11 +322,13 @@ something *wrong*, and you cannot get a real model to do that on demand.
 - **Not tuned exhaustively.** The sweep is sequential and greedy, not a grid.
   Chunk size and k interact and were optimised in sequence, so this may be a
   local optimum.
-- **Answer quality is bounded by a 3B local generator.** Retrieval metrics are
-  model-independent and transfer; answer correctness would not.
-- **Retrieval-only evidence.** Every decision rests on recall/hit/MRR/precision.
-  End-to-end answer correctness was not run to completion — see
-  [What is not measured](#what-is-not-measured).
+- **Answer quality is bounded by a 3B local generator.** Measured: even in the
+  tuned config, 13 of 26 answerable questions retrieve the right page and still
+  produce a wrong answer. Retrieval metrics are model-independent and transfer;
+  the 0.4643 correctness figure would not.
+- **Configuration decisions rest on retrieval metrics.** The end-to-end run
+  validated the final choice rather than driving it; the sweeps themselves were
+  retrieval-only (~2 s per config versus ~90 s per question).
 
 ## Provenance
 
