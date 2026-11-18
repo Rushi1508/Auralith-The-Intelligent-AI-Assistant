@@ -20,6 +20,7 @@ Usage:
     python eval/run_eval.py --config baseline --out results/baseline.json
     python eval/run_eval.py --config baseline --no-generate     # retrieval only
     python eval/run_eval.py --validate-judge
+    python eval/run_eval.py --rejudge results/baseline.json   # judge only, stored answers
 """
 
 from __future__ import annotations
@@ -333,8 +334,48 @@ def run_config(
     }
 
 
+def rejudge(path: Path, settings: Settings) -> dict[str, Any]:
+    """Re-score the stored answers in a result file with the current judge.
+
+    Generation checkpoints are keyed on the answer prompt, so runs made with an
+    older prompt cannot be resumed; their answers survive only in the result JSON.
+    """
+    result = json.loads(path.read_text(encoding="utf-8"))
+    questions = {q["id"]: q for q in load_questions()}
+    judge = get_judge_model(settings)
+    rows = result["questions"]
+    for i, row in enumerate(rows, 1):
+        q = questions[row["id"]]
+        verdict = judge_answer(
+            judge,
+            q["question"],
+            q["answer"],
+            row.get("answer", ""),
+            answerable=q.get("answerable", True),
+        )
+        row["judge_score"] = verdict.score
+        row["judge_reason"] = verdict.reason
+        row["judge_parse_failed"] = verdict.parse_failed
+        row["keyword_score"] = keyword_score(row.get("answer", ""), q.get("answer_keys", []))
+        log.info("[judge %2d/%d] %-11s score=%.0f", i, len(rows), row["id"], verdict.score)
+    unload_model(settings, settings.judge_model)
+    k = result["config"]["k"]
+    result["summary"] = aggregate(rows, k)
+    result["by_type"] = by_type(rows, k)
+    result["settings"]["judge_model"] = settings.judge_model
+    result["run"]["rejudged_utc"] = datetime.now(timezone.utc).isoformat()
+    result["run"]["judge_prompt_sha1"] = hashlib.sha1(JUDGE_PROMPT.encode("utf-8")).hexdigest()[:8]
+    return result
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--rejudge",
+        type=Path,
+        default=None,
+        help="Re-score the stored answers in this result file with the current judge (overwrites it)",
+    )
     ap.add_argument("--config", default="baseline", help="Named config to run")
     ap.add_argument("--out", default=None, help="Output JSON path")
     ap.add_argument(
@@ -383,6 +424,13 @@ def main() -> int:
                 print(f"  DISAGREE {label}: expected={d['expected']} judged={d['judged']}")
                 print(f"    {d['reason']}")
         print(f"Written to {out}")
+        return 0
+
+    if args.rejudge:
+        result = rejudge(args.rejudge, settings)
+        args.rejudge.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(f"answer_correctness: {result['summary'].get('answer_correctness')}")
+        print(f"Written to {args.rejudge}")
         return 0
 
     named = {"baseline": BASELINE_CONFIG, "production": PRODUCTION_CONFIG}

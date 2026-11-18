@@ -10,7 +10,7 @@ generation, or conversation. It runs fully locally: no API key needed.
 
 - **Retrieval recall up from 0.62 to 0.88.** Retrieval misses fell 78% (9/26 → 2/26) after systematic sweeps of chunking, k, hybrid search and reranking.
 - **Wrongly refused answers down from 5/26 to 2/26** after a prompt change that lets the model give partial answers.
-- **The LLM-as-judge is checked against hand labels.** The first judge agreed with a human only 15/24 times; the rewritten one agrees 21/24 (87.5%).
+- **The LLM-as-judge is checked against hand labels.** The first judge agreed with a human only 15/24 times; the rewritten one agrees 21/24 (87.5%). Re-scoring older runs with it showed that the earlier answer-quality gain was an artefact of the first judge.
 - **Negative results are reported too.** Hybrid BM25 search was hypothesised, tested and rejected (+0.0045 MRR, which is noise).
 - **Every number has a 95% confidence interval** from a paired bootstrap, and any claim whose interval includes zero is labelled as not established.
 
@@ -35,8 +35,20 @@ What made the difference:
 
 Retrieval is no longer the bottleneck. The right page now reaches the model for 24 of
 26 answerable questions, so the remaining errors come from the 3B local generator.
-The end-to-end correctness gain (10/28 → 13/28) is within the noise on 28 questions,
-and the README says so rather than claiming it.
+
+Answer correctness, all runs scored by the same fixed judge and also checked by hand:
+
+| run | judge | hand |
+|---|---|---|
+| baseline | 14/28 | 13/28 |
+| tuned retrieval | 14/28 | 15/28 |
+| tuned + partial-answer prompt | **16/28** | **19/28** |
+
+Better retrieval did not measurably improve answers: tuned fixes 8 baseline errors but
+makes 6 new ones, all with the right page in context. The partial-answer prompt is the
+best run, but every correctness interval still reaches zero on 28 questions, so no
+answer-quality gain is claimed. Details are in
+[`results/comparison_ci.md`](results/comparison_ci.md).
 
 Full tables, per-question-type breakdowns and limitations are in
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) and [`results/`](results/).

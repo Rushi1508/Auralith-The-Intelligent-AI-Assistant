@@ -33,7 +33,9 @@
     "judged": true,
     "wall_seconds": 2988.24,
     "python": "3.14.3",
-    "platform": "Windows-11-10.0.26200-SP0"
+    "platform": "Windows-11-10.0.26200-SP0",
+    "rejudged_utc": "2026-11-18T00:05:36.021683+00:00",
+    "judge_prompt_sha1": "9c31c5bb"
   },
   "index": {
     "index_key": "recursive_cs500_co100",
@@ -50,8 +52,8 @@
     "hit@6": 0.9231,
     "mrr": 0.6917,
     "precision@6": 0.2308,
-    "answer_correctness": 0.4643,
-    "answer_correctness_answerable": 0.4231,
+    "answer_correctness": 0.5,
+    "answer_correctness_answerable": 0.4615,
     "abstention_accuracy": 1.0,
     "false_abstention_rate": 0.1923,
     "keyword_score": 0.619,
@@ -66,8 +68,8 @@
       "hit@6": 1.0,
       "mrr": 0.69,
       "precision@6": 0.2333,
-      "answer_correctness": 0.4,
-      "answer_correctness_answerable": 0.4,
+      "answer_correctness": 0.6,
+      "answer_correctness_answerable": 0.6,
       "false_abstention_rate": 0.0,
       "keyword_score": 0.8,
       "mean_latency_s": 105.786
@@ -80,8 +82,8 @@
       "hit@6": 1.0,
       "mrr": 1.0,
       "precision@6": 0.3333,
-      "answer_correctness": 1.0,
-      "answer_correctness_answerable": 1.0,
+      "answer_correctness": 0.0,
+      "answer_correctness_answerable": 0.0,
       "false_abstention_rate": 0.0,
       "keyword_score": 0.5,
       "mean_latency_s": 97.377
@@ -108,8 +110,8 @@
       "hit@6": 1.0,
       "mrr": 0.625,
       "precision@6": 0.25,
-      "answer_correctness": 0.5,
-      "answer_correctness_answerable": 0.5,
+      "answer_correctness": 0.75,
+      "answer_correctness_answerable": 0.75,
       "false_abstention_rate": 0.25,
       "keyword_score": 0.5,
       "mean_latency_s": 84.4868
@@ -218,7 +220,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
       "judge_score": 1.0,
-      "judge_reason": "Both answers convey the same fact about the number of layers.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -312,7 +314,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.5,
       "judge_score": 0.0,
-      "judge_reason": "Extra incorrect detail about French translation task.",
+      "judge_reason": "['WMT 2014 English-to-French translation task (extra information)']",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -405,7 +407,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
       "judge_score": 0.0,
-      "judge_reason": "Incorrect number of attention heads.",
+      "judge_reason": "['The candidate answer states the base Transformer uses 12 self-attention heads, which contradicts the reference answer.', 'The candidate answer mentions A to denote the number of self-attention heads but does not specify that h = 8 for the base Transformer.']",
       "judge_parse_failed": false,
       "keyword_score": 0.5
     },
@@ -498,7 +500,7 @@
       "reciprocal_rank": 0.5,
       "precision": 0.16666666666666666,
       "judge_score": 1.0,
-      "judge_reason": "Same facts, different wording.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -591,7 +593,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.3333333333333333,
       "judge_score": 1.0,
-      "judge_reason": "The candidate answer conveys the same factual content as the reference answer.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -777,7 +779,7 @@
       "reciprocal_rank": 0.5,
       "precision": 0.16666666666666666,
       "judge_score": 1.0,
-      "judge_reason": "Both answers convey the same fact about the number of warmup steps.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -962,8 +964,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.3333333333333333,
-      "judge_score": 0.0,
-      "judge_reason": "Missing detail about sequential operations",
+      "judge_score": 1.0,
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1055,8 +1057,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.3333333333333333,
-      "judge_score": 1.0,
-      "judge_reason": "All key facts match the reference.",
+      "judge_score": 0.0,
+      "judge_reason": "['BERT-LARGE has a hidden size of 1024, not 768']",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1149,7 +1151,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
       "judge_score": 1.0,
-      "judge_reason": "The candidate answer conveys the same factual content as the reference.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1242,7 +1244,7 @@
       "reciprocal_rank": 0.5,
       "precision": 0.3333333333333333,
       "judge_score": 1.0,
-      "judge_reason": "The facts match.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1335,7 +1337,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.3333333333333333,
       "judge_score": 1.0,
-      "judge_reason": "The candidate answer correctly states the facts present in the reference.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1428,7 +1430,7 @@
       "reciprocal_rank": 0.2,
       "precision": 0.16666666666666666,
       "judge_score": 0.0,
-      "judge_reason": "Missing key facts about the specific tasks.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 0.0
     },
@@ -1521,7 +1523,7 @@
       "reciprocal_rank": 0.2,
       "precision": 0.16666666666666666,
       "judge_score": 0.0,
-      "judge_reason": "Missing key facts about corpora and their sizes.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 0.0
     },
@@ -1613,8 +1615,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.5,
-      "judge_score": 0.0,
-      "judge_reason": "Missing key facts about BERT-LARGE and OpenAI GPT scores.",
+      "judge_score": 1.0,
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1707,7 +1709,7 @@
       "reciprocal_rank": 0.5,
       "precision": 0.16666666666666666,
       "judge_score": 0.0,
-      "judge_reason": "Missing batch size of 256 sequences and exact number of training steps.",
+      "judge_reason": "['The candidate answer states the batch size as 128,000 words instead of 256 sequences (128,000 tokens per batch).', 'The number of training steps is not correctly stated in the candidate answer.']",
       "judge_parse_failed": false,
       "keyword_score": 0.3333
     },
@@ -1801,7 +1803,7 @@
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
       "judge_score": 0.0,
-      "judge_reason": "Missing key facts about how they differ.",
+      "judge_reason": "['The candidate answer does not provide the specific details of how RAG-Sequence and RAG-Token differ, only that they use different decoding procedures.']",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1894,8 +1896,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
-      "judge_score": 1.0,
-      "judge_reason": "Same facts, different wording.",
+      "judge_score": 0.0,
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -1987,8 +1989,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.16666666666666666,
-      "judge_score": 0.0,
-      "judge_reason": "The number of parameters is incorrect.",
+      "judge_score": 1.0,
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 0.0
     },
@@ -2267,7 +2269,7 @@
       "reciprocal_rank": 0.25,
       "precision": 0.16666666666666666,
       "judge_score": 1.0,
-      "judge_reason": "Same facts, different wording.",
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 1.0
     },
@@ -2359,8 +2361,8 @@
       "hit": 1.0,
       "reciprocal_rank": 0.5,
       "precision": 0.3333333333333333,
-      "judge_score": 0.0,
-      "judge_reason": "Missing the names of the decoding procedures.",
+      "judge_score": 1.0,
+      "judge_reason": "",
       "judge_parse_failed": false,
       "keyword_score": 0.0
     },
@@ -2545,8 +2547,8 @@
       "hit": 1.0,
       "reciprocal_rank": 1.0,
       "precision": 0.3333333333333333,
-      "judge_score": 1.0,
-      "judge_reason": "All key facts are present and correct.",
+      "judge_score": 0.0,
+      "judge_reason": "[\"The candidate answer does not mention the specific paper 'Attention Is All You Need' by Vaswani et al. (2017).\", 'The candidate answer provides additional information about self-attention and point-wise, fully connected layers which is not required by the question.']",
       "judge_parse_failed": false,
       "keyword_score": 0.5
     },

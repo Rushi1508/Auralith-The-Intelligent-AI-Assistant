@@ -188,8 +188,9 @@ rather than have to extract them.
 1. **28 questions is a small sample.** One question is worth ~3.8 percentage
    points of recall. `eval/compare.py` computes paired bootstrap 95% intervals
    between two runs (`results/comparison_ci.md`). They are wider than the
-   earlier "~0.04" rule of thumb suggested. The baseline→tuned answer-correctness
-   delta of +0.107 has an interval spanning zero. Retrieval deltas of +0.18 to
+   earlier "~0.04" rule of thumb suggested. Under the fixed judge, baseline and
+   tuned tie on answer correctness (14/28 each, interval [-0.29, +0.29]); the
+   earlier +0.107 came from the first judge. Retrieval deltas of +0.18 to
    +0.27 clear zero. The Phase C hybrid result (+0.0045) is far inside noise,
    which is exactly why it was rejected. Sweeps only store aggregates, so they
    have no intervals.
