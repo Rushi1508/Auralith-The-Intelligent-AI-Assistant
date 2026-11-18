@@ -49,6 +49,7 @@ already has hand labels in `eval/judge_labels.json`).
 | baseline | 14/28 | 13/28 | rag-008 (gives only the matched-index figures; the question also asks for mismatched) |
 | production | 14/28 | 15/28 | attn-002 (failed for an extra, true EN-FR score), rag-002 (failed "BART"; the identical partial-run answer passed), rag-007 (passed an answer that is only citation markers) |
 | production_partial | 16/28 | 19/28 | attn-003, bert-002, rag-001 (see METHODOLOGY) |
+| production_qwen | 22/28 | 22/28 | attn-008, xdoc-001 (passed wrong answers); rag-001, rag-006 (failed right ones) |
 
 Paired bootstrap on the hand scores:
 
@@ -88,3 +89,38 @@ the output contract, so it is scored wrong.
 Retrieval changes are detectable on this question set. End-to-end changes
 under about 0.15 are not. The generator is now the bottleneck, and showing a
 generation-side improvement needs either a large effect or more questions.
+
+## 3B vs 7B generator
+
+`python eval/compare.py results/production_partial.json results/production_qwen.json`
+
+Same retrieval config and partial-answer prompt; only the generator changes,
+from llama3.2:3b to qwen2.5:7b. Retrieval metrics are identical, so only the
+answer rows are shown.
+
+| metric | n | production_partial | production_qwen | delta | 95% CI (paired bootstrap) | |
+|---|---|---|---|---|---|---|
+| answer_correctness (all) | 28 | 0.5714 | 0.7857 | +0.2143 | [+0.0000, +0.4286] | includes 0 |
+| answer_correctness (answerable) | 26 | 0.5385 | 0.7692 | +0.2308 | [+0.0000, +0.4615] | includes 0 |
+| abstention_accuracy (unanswerable) | 2 | 1.0000 | 1.0000 | +0.0000 | [+0.0000, +0.0000] | includes 0 |
+| false_abstention_rate (answerable) | 26 | 0.0769 | 0.0769 | +0.0000 | [-0.1154, +0.1154] | includes 0 |
+| keyword_score | 28 | 0.7143 | 0.7262 | +0.0119 | [-0.1250, +0.1369] | includes 0 |
+
+qwen2.5:7b is also the judge model, so every qwen answer was read by hand.
+Hand 22/28 matches the judge's 22/28, with two errors in each direction
+(table above), so there is no sign that the judge favours its own model's answers.
+
+On hand scores the gain is smaller than the judge reports, because the judge
+under-scores the 3B run (16 vs 19 by hand):
+
+| comparison | hand delta | 95% CI | |
+|---|---|---|---|
+| partial (3B) → qwen (7B) | +3/28 (+0.107) | [-0.036, +0.250] | includes 0 |
+
+By hand the 7B model wins on bert-003, bert-005, bert-008 and rag-008, which
+are all multi-part answers that the 3B model left incomplete. It loses on
+attn-007, where it refuses with the answer in context. It still refuses wrongly on
+attn-006 and bert-006, gets attn-008 wrong (it gives the big model's 3.5 days as
+the base model's training time), and on xdoc-001 it does not name the paper.
+Borderline passes: attn-005 leaves out the softmax-gradient reason, and rag-001
+expands RAG as "Research Augmented Generation".

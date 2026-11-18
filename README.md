@@ -42,12 +42,13 @@ Answer correctness, all runs scored by the same fixed judge and also checked by 
 |---|---|---|
 | baseline | 14/28 | 13/28 |
 | tuned retrieval | 14/28 | 15/28 |
-| tuned + partial-answer prompt | **16/28** | **19/28** |
+| tuned + partial-answer prompt | 16/28 | 19/28 |
+| same, 7B generator (qwen2.5:7b) | **22/28** | **22/28** |
 
 Better retrieval did not measurably improve answers: tuned fixes 8 baseline errors but
-makes 6 new ones, all with the right page in context. The partial-answer prompt is the
-best run, but every correctness interval still reaches zero on 28 questions, so no
-answer-quality gain is claimed. Details are in
+makes 6 new ones, all with the right page in context. The partial-answer prompt and the
+7B generator each help, mostly on multi-part answers, but every correctness interval
+still reaches zero on 28 questions, so no answer-quality gain is claimed. Details are in
 [`results/comparison_ci.md`](results/comparison_ci.md).
 
 Full tables, per-question-type breakdowns and limitations are in
