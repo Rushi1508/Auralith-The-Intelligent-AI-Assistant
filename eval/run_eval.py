@@ -433,7 +433,14 @@ def main() -> int:
         print(f"Written to {args.rejudge}")
         return 0
 
-    named = {"baseline": BASELINE_CONFIG, "production": PRODUCTION_CONFIG}
+    named = {
+        "baseline": BASELINE_CONFIG,
+        "production": PRODUCTION_CONFIG,
+        # Phase F step 4: best MRR in results/sweep_rerank.md, now scored end to end.
+        "production_rerank": PRODUCTION_CONFIG.with_(
+            name="production_rerank", use_rerank=True, rerank_fetch_k=20
+        ),
+    }
     if args.config not in named:
         raise SystemExit(
             f"Unknown config {args.config!r}. Choose from {sorted(named)}; "
