@@ -1,0 +1,722 @@
+{
+  "model": "llama3.2:3b",
+  "provider": "ollama",
+  "temperature": 0.0,
+  "timestamp": "2026-11-20T04:43:56+00:00",
+  "summary": {
+    "n": 60,
+    "accuracy": 0.9167,
+    "accuracy_ci95": [
+      0.8333,
+      0.9833
+    ],
+    "first_attempt_unparseable": 0,
+    "by_kind": {
+      "boundary": {
+        "n": 18,
+        "accuracy": 0.8333
+      },
+      "clear": {
+        "n": 42,
+        "accuracy": 0.9524
+      }
+    },
+    "confusion": {
+      "SearchWeb": {
+        "SearchWeb": 20,
+        "WriteCode": 0,
+        "Converse": 0
+      },
+      "WriteCode": {
+        "SearchWeb": 3,
+        "WriteCode": 17,
+        "Converse": 0
+      },
+      "Converse": {
+        "SearchWeb": 2,
+        "WriteCode": 0,
+        "Converse": 18
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "sw-01",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What is the weather forecast for London tomorrow?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"London weather forecast tomorrow\"}",
+      "seconds": 16.67
+    },
+    {
+      "id": "sw-02",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Who won the most recent Formula 1 Grand Prix?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"most recent Formula 1 Grand Prix winner\"}",
+      "seconds": 4.03
+    },
+    {
+      "id": "sw-03",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What is the current price of Bitcoin in US dollars?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Bitcoin current price in USD\"}",
+      "seconds": 3.23
+    },
+    {
+      "id": "sw-04",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Latest news about the James Webb Space Telescope",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"James Webb Space Telescope latest news\"}",
+      "seconds": 3.03
+    },
+    {
+      "id": "sw-05",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What is the latest stable release of Python?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"latest stable release of Python\"}",
+      "seconds": 3.1
+    },
+    {
+      "id": "sw-06",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Find reviews of the newest Pixel phone",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"newest Pixel phone reviews\"}",
+      "seconds": 3.34
+    },
+    {
+      "id": "sw-07",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What are the opening hours of the British Museum this week?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"British Museum opening hours this week\"}",
+      "seconds": 4.49
+    },
+    {
+      "id": "sw-08",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Search for recent papers on retrieval-augmented generation",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"recent papers on retrieval-augmented generation\"}",
+      "seconds": 4.48
+    },
+    {
+      "id": "sw-09",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What is the exchange rate between the euro and the Indian rupee today?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"euro to indian rupee current exchange rate\"}",
+      "seconds": 4.0
+    },
+    {
+      "id": "sw-10",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Who is the current CEO of OpenAI?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"OpenAI CEO\"}",
+      "seconds": 2.78
+    },
+    {
+      "id": "sw-11",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "When does the next iPhone launch event take place?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"next iPhone launch event date\"}",
+      "seconds": 3.62
+    },
+    {
+      "id": "sw-12",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Look up the population of Mumbai",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"population of Mumbai\"}",
+      "seconds": 3.03
+    },
+    {
+      "id": "sw-13",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What movies are showing in cinemas this weekend?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"movies showing in cinemas this weekend\"}",
+      "seconds": 4.22
+    },
+    {
+      "id": "sw-14",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Has LangGraph released a new major version recently?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"LangGraph recent major version release\"}",
+      "seconds": 3.77
+    },
+    {
+      "id": "sw-15",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "Which Python library is most popular for PDF parsing in 2026?",
+      "note": "Programming topic, but asks about current popularity, not for code.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"most popular Python library for PDF parsing 2026\"}",
+      "seconds": 4.79
+    },
+    {
+      "id": "sw-16",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "Is there a known bug in pandas 2.2 with read_csv and UTF-16 files?",
+      "note": "Code-adjacent, but answerable only by looking up issue trackers.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"pandas 2.2 read_csv UTF-16 file bugs\"}",
+      "seconds": 4.44
+    },
+    {
+      "id": "sw-17",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "What did the Federal Reserve decide at its last meeting, and what does it mean for mortgages?",
+      "note": "Has an explanation part, but the fact it depends on is current news.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Federal Reserve last meeting decision impact on mortgages\"}",
+      "seconds": 3.73
+    },
+    {
+      "id": "sw-18",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "How much does an M4 MacBook Air cost right now?",
+      "note": "Phrased like a casual question; prices need a lookup.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"M4 MacBook Air current price\"}",
+      "seconds": 3.29
+    },
+    {
+      "id": "sw-19",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "Tell me about today's top story on Hacker News",
+      "note": "'Tell me about' reads conversational, but 'today' needs a lookup.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Hacker News top story today\"}",
+      "seconds": 3.45
+    },
+    {
+      "id": "sw-20",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "What's the official documentation URL for the Streamlit file_uploader widget?",
+      "note": "Coding context, but wants a reference, not code.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Streamlit file_uploader widget official documentation URL\"}",
+      "seconds": 3.6
+    },
+    {
+      "id": "wc-01",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a Python function that checks whether a string is a palindrome.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"def is_palindrome(s): return s == s[::-1]\"}",
+      "seconds": 4.19
+    },
+    {
+      "id": "wc-02",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a SQL query that returns the top 5 customers by total order value.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"SELECT * FROM customers ORDER BY total_order_value DESC LIMIT 5\"}",
+      "seconds": 4.19
+    },
+    {
+      "id": "wc-03",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Create a bash script that backs up a directory to a timestamped tar.gz file.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"#!/bin/bash\\nset -ex\\ntimestamp=$(date +%Y-%m-%d_%H-%M-%S)\\nbackup_dir=/path/to/directory\\ntar -czf \\\"/backup/\\$timestamp.tar.gz\\\" \\$backup_dir\"}",
+      "seconds": 9.39
+    },
+    {
+      "id": "wc-04",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Implement binary search in Java.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"binary search in Java\"}",
+      "seconds": 2.79
+    },
+    {
+      "id": "wc-05",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a JavaScript function to debounce another function.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"function debounce(func, wait, immediate) { return function() { var context = this, args = arguments, later = function() { if (context && args) func.apply(context, args); } setTimeout(later, wait); if (immediate && !context) document.addEventListener('DOMContentLoaded', func); }; }\"}",
+      "seconds": 10.16
+    },
+    {
+      "id": "wc-06",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Give me a Dockerfile for a FastAPI app running on Python 3.12.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Dockerfile for FastAPI app Python 3.12\"}",
+      "seconds": 4.18
+    },
+    {
+      "id": "wc-07",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a regex that matches valid IPv4 addresses.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\"}",
+      "seconds": 10.24
+    },
+    {
+      "id": "wc-08",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Code a simple to-do list component in React.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"import React from 'react';\\n\\nfunction TodoList({ items }) {\\n  return (\\n    <div>\\n      {items.map((item, index) => (\\n        <li key={index}>{item}</li>\\n      ))}\\n    </div>\\n  );\\n}\\n\\nfunction App() {\\n  const [items, setItems] = React.useState(['Buy milk', 'Walk the dog']);\\n\\n  return (\\n    <TodoList items={items} />\\n  );\"}}",
+      "seconds": 17.91
+    },
+    {
+      "id": "wc-09",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a C program that reverses a linked list.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"C program to reverse a linked list\"}",
+      "seconds": 3.19
+    },
+    {
+      "id": "wc-10",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Generate a Python script that renames all .jpeg files in a folder to .jpg.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"open('folder', 'r'); for file in os.listdir('folder'): if file.endswith('.jpeg'): os.rename(os.path.join('folder', file), os.path.join('folder', file.replace('.jpeg', '.jpg'))); open('folder', 'w')\"}",
+      "seconds": 8.93
+    },
+    {
+      "id": "wc-11",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write pytest tests for a function add(a, b) that adds two numbers.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"def add(a, b):\\n    return a + b\\npytest marks = [pytest.mark.parametrize('a', [1, 2, 3])]\\ndef test_add():\\n    assert add(1, 2) == 3\\n    assert add(-1, -1) == -2\\n    assert add(0, 0) == 0\\n    for a in pytest.mark.parametrize('a', [4, 5, 6]):\\n        assert add(a, 1) == a + 1\\n        assert add(1, a) == a + 1\\n    for b in pytest.mark.parametrize('b', [7, 8, 9]):\\n        assert add(3, b) == 3 + b\\n        assert add(b, 3) == 3 + b\"}",
+      "seconds": 24.75
+    },
+    {
+      "id": "wc-12",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a GitHub Actions workflow that runs pytest on every push.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"{\"}",
+      "seconds": 2.43
+    },
+    {
+      "id": "wc-13",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Implement an LRU cache class in Python without using functools.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"class LRUCache:\\n    def __init__(self, capacity):\\n        self.capacity = capacity\\n        self.cache = {} \\n    def get(self, key):\\n        if key not in self.cache:\\n            return -1\\n        else:\\n            del self.cache[key]\\n            self.cache[key] = None\\n            return self.cache[key]\\n    def put(self, key, value):\\n        if key in self.cache:\\n            del self.cache[key]\\n        elif len(self.cache) == self.capacity:\\n  ",
+      "seconds": 19.39
+    },
+    {
+      "id": "wc-14",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a Rust function that counts word frequencies in a string.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"fn count_word_frequencies(input_string: &str) -> HashMap<String, usize> { let mut frequency_map = HashMap::new(); for word in input_string.split_whitespace() { *frequency_map.entry(word.to_lowercase()).or_insert(0) += 1; } frequency_map }\"}",
+      "seconds": 12.16
+    },
+    {
+      "id": "wc-15",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Convert this to JavaScript: def square(x): return x * x",
+      "note": "Contains code; the request is for new code in another language.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"function square(x) { return x * x; }\"}",
+      "seconds": 4.92
+    },
+    {
+      "id": "wc-16",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Fix this so it doesn't crash on an empty list: def avg(xs): return sum(xs) / len(xs)",
+      "note": "Sounds like debugging help, but the deliverable is corrected code.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"how to fix divide by zero error in python\"}",
+      "seconds": 4.29
+    },
+    {
+      "id": "wc-17",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "I need something that pulls all the email addresses out of a text file, in Python.",
+      "note": "No 'write' verb; still a request for code.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"open 'text_file.txt' in read mode, read all lines, split each line by comma and space, extract the part before the '@', print the extracted parts\"}",
+      "seconds": 6.52
+    },
+    {
+      "id": "wc-18",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Show me how to read a CSV file with pandas and plot one column.",
+      "note": "'Show me how' could be an explanation, but the answer is a code snippet.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"pandas csv plotting tutorial\"}",
+      "seconds": 3.3
+    },
+    {
+      "id": "wc-19",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Can you make a Streamlit app that lets me upload an image and shows its size?",
+      "note": "Phrased as a question; asks for a program.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"Streamlit app to upload image and show its size\"}",
+      "seconds": 3.99
+    },
+    {
+      "id": "wc-20",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Add type hints to this function: def greet(name, times): return name * times",
+      "note": "Small edit, but the output is code.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"def greet(name: str, times: int) -> str: return name * times\"}",
+      "seconds": 5.63
+    },
+    {
+      "id": "cv-01",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Hi! How are you doing today?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.38
+    },
+    {
+      "id": "cv-02",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Can you explain the difference between supervised and unsupervised learning?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"difference between supervised and unsupervised learning\"}",
+      "seconds": 3.38
+    },
+    {
+      "id": "cv-03",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Give me some tips for preparing for a job interview.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"preparing for a job interview\"}",
+      "seconds": 3.08
+    },
+    {
+      "id": "cv-04",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Why is the sky blue?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.4
+    },
+    {
+      "id": "cv-05",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Help me plan a study schedule for my exams next month.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Help me plan a study schedule for my exams next month.\"}",
+      "seconds": 4.34
+    },
+    {
+      "id": "cv-06",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "What are the pros and cons of working from home?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"What are the pros and cons of working from home?\"}",
+      "seconds": 4.12
+    },
+    {
+      "id": "cv-07",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Summarise the plot of Romeo and Juliet in three sentences.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Romeo and Juliet plot summary\"}",
+      "seconds": 3.42
+    },
+    {
+      "id": "cv-08",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "If a train travels 120 km in 1.5 hours, what is its average speed? Walk me through it.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"average speed of a train given distance and time\"}",
+      "seconds": 4.78
+    },
+    {
+      "id": "cv-09",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Suggest a name for my new cat.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Suggest a name for your new cat.\"}",
+      "seconds": 3.73
+    },
+    {
+      "id": "cv-10",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "How do I politely decline a meeting invitation?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"How to decline a meeting invitation politely\"}",
+      "seconds": 3.71
+    },
+    {
+      "id": "cv-11",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Thanks, that was really helpful!",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.35
+    },
+    {
+      "id": "cv-12",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Explain what photosynthesis is to a ten-year-old.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Explain what photosynthesis is to a ten-year-old.\"}",
+      "seconds": 3.81
+    },
+    {
+      "id": "cv-13",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "What's a good way to stay motivated while learning to play guitar?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"What\"}}",
+      "seconds": 2.69
+    },
+    {
+      "id": "cv-14",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Translate 'good morning, how are you?' into Spanish.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Translate good morning, how are you? into Spanish\"}",
+      "seconds": 3.55
+    },
+    {
+      "id": "cv-15",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Explain how quicksort works and why its average case is O(n log n).",
+      "note": "Algorithm topic, but asks for an explanation, not an implementation.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"quicksort algorithm explanation\"}",
+      "seconds": 3.21
+    },
+    {
+      "id": "cv-16",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "What does this Python line do: [x for x in range(10) if x % 2]",
+      "note": "Contains code; wants it explained, not written.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"[x for x in range(10) if x % 2]\"}",
+      "seconds": 4.64
+    },
+    {
+      "id": "cv-17",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Write a short poem about autumn leaves.",
+      "note": "Has the verb 'write', but the output is prose, not source code.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Write a short poem about autumn leaves.\"}",
+      "seconds": 3.25
+    },
+    {
+      "id": "cv-18",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Should I learn Rust or Go first as a backend developer?",
+      "note": "Programming topic; an opinion and reasoning, no lookup or code needed.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"learning path for backend development in Rust and Go\"}",
+      "seconds": 3.52
+    },
+    {
+      "id": "cv-19",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "What is a transformer in machine learning?",
+      "note": "Stable textbook concept; no current information needed.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"What is a transformer in machine learning?\"}",
+      "seconds": 3.36
+    },
+    {
+      "id": "cv-20",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Draft an email to my landlord asking to fix the heating.",
+      "note": "A generation task, but text, not code.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Draft an email to my landlord asking to fix the heating.\"}",
+      "seconds": 4.15
+    }
+  ]
+}
