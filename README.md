@@ -11,6 +11,7 @@ generation, or conversation. It runs fully locally: no API key needed.
 - **Retrieval recall up from 0.62 to 0.88.** Retrieval misses fell 78% (9/26 → 2/26) after systematic sweeps of chunking, k, hybrid search and reranking.
 - **Wrongly refused answers down from 5/26 to 2/26** after a prompt change that lets the model give partial answers.
 - **The LLM-as-judge is checked against hand labels.** The first judge agreed with a human only 15/24 times; the rewritten one agrees 21/24 (87.5%). Re-scoring older runs with it showed that the earlier answer-quality gain was an artefact of the first judge.
+- **Agent router errors cut from 9 to 2 across 84 requests** by a prompt fix for a bias towards web search, checked on a held-out set written before the fix (20/24 → 24/24).
 - **Negative results are reported too.** Hybrid BM25 search was hypothesised, tested and rejected (+0.0045 MRR, which is noise).
 - **Every number has a 95% confidence interval** from a paired bootstrap, and any claim whose interval includes zero is labelled as not established.
 
@@ -50,6 +51,17 @@ makes 6 new ones, all with the right page in context. The partial-answer prompt 
 7B generator each help, mostly on multi-part answers, but every correctness interval
 still reaches zero on 28 questions, so no answer-quality gain is claimed. Details are in
 [`results/comparison_ci.md`](results/comparison_ci.md).
+
+Agent routing (llama3.2:3b, hand-labelled requests):
+
+| router prompt | main set | held-out set |
+|---|---|---|
+| original | 55/60 | 20/24 |
+| revised | **58/60** | **24/24** |
+
+The original prompt sent every misrouted request to web search, including code fixes
+and a translation. The held-out gain clears zero (paired CI [+0.04, +0.33]). The fix
+overcorrects slightly: 2 of 20 search questions now go to conversation.
 
 Full tables, per-question-type breakdowns and limitations are in
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) and [`results/`](results/).

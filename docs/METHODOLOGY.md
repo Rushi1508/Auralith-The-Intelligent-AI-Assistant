@@ -180,6 +180,43 @@ So sweeps are exhaustive and cheap, and only the finalists pay for an
 end-to-end run. Coupling the two would have made Phase B/C take days and would
 have added generator noise to a measurement that does not need it.
 
+## Router evaluation
+
+The agent's router (`route_node`) picks SearchWeb, WriteCode or Converse for
+every general question, so a wrong route means a wrong kind of answer.
+`eval/eval_router.py` runs only the routing step and the graph's recovery
+policy (retry, then fall back to Converse), with no search, code or answer
+generation. Accuracy is scored on the route the graph would actually execute.
+A pass takes about 5 minutes.
+
+Two hand-labelled sets, each with `clear` and `boundary` items:
+
+- `eval/routes.json`: 60 requests, 20 per route. Written before any router run.
+- `eval/routes_heldout.json`: 24 requests, 8 per route. Written after the first
+  run but **before** the prompt was changed, and never used to tune it.
+
+Results with `llama3.2:3b` (temperature 0):
+
+| prompt | main (60) | held-out (24) |
+|---|---|---|
+| original | 55/60 | 20/24 |
+| revised | **58/60** | **24/24** |
+| paired 95% CI of delta | [-0.033, +0.133] | [+0.042, +0.333] |
+
+The original prompt defined SearchWeb as "current information, **facts**, …
+or anything requiring a web lookup" and Converse as "anything else". Every
+error went to SearchWeb (8 of 9 across both sets), including a Dockerfile
+request, a bug fix on given code and a translation. The revised prompt limits
+SearchWeb to information that could be out of date, says that code as the
+answer is WriteCode even when phrased as a question, and lists translation
+and explaining code under Converse.
+
+The held-out gain clears zero; the main-set gain does not on its own. The fix
+overcorrects slightly: two SearchWeb items ("Who is the current CEO of
+OpenAI?", a known-bug question about pandas 2.2) now go to Converse. A larger
+router model (`qwen2.5:7b`) was not tried, because the 3B is now near the
+ceiling of these sets and a bigger router would slow every chat turn.
+
 ## Known limitations
 
 These are real and an interviewer should be able to find them stated here
@@ -214,3 +251,9 @@ rather than have to extract them.
 6. **The eval set was written by the same author as the pipeline.** Questions
    were written from the papers before any results were seen, but this is not a
    held-out set produced by an independent party.
+
+7. **The router sets are small and self-written.** 84 requests in total. The
+   held-out set has now been used once to judge the prompt fix, so any further
+   prompt tuning needs fresh held-out requests. Routing is measured on its
+   own; the end-to-end answer quality of the search, code and converse paths
+   is not.

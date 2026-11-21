@@ -29,10 +29,15 @@ ROUTER_PROMPT = """You are a request router. Classify the user's request into \
 exactly one action.
 
 Actions:
-- SearchWeb: the user wants current information, facts, news, or anything \
-requiring a web lookup.
-- WriteCode: the user wants source code written.
-- Converse: anything else - explanation, discussion, step-by-step reasoning.
+- SearchWeb: the answer depends on current or changing information that must \
+be looked up: news, prices, weather, schedules, latest versions, local places.
+- WriteCode: the user wants code as the answer - write, fix, convert, or show \
+an example of code. Pick this even if the request is phrased as a question.
+- Converse: anything you can answer yourself - explanation (including \
+explaining code), discussion, advice, translation, maths, writing prose.
+
+Do not choose SearchWeb just because a request mentions a technology or asks \
+"how to"; choose it only when the answer could be out of date.
 
 Respond with ONLY a JSON object and nothing else:
 {{"action": "SearchWeb" | "WriteCode" | "Converse", "parameters": "<the search \

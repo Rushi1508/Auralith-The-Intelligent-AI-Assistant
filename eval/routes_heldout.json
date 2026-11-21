@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "description": "Held-out router set. 24 requests, 8 per action, written 2026-11-21 BEFORE the router prompt fix and never used to tune it. Same label definitions as eval/routes.json. Report it next to the main set so a prompt change tuned on the main set's misses can be checked on requests it never saw.",
+  "labelling_notes": [
+    "kind=clear / kind=boundary as in eval/routes.json.",
+    "Search boundary items are deliberately fact-like (they would still be wrong to answer from memory), to catch a fix that overcorrects away from SearchWeb."
+  ],
+  "routes": [
+    {"id": "h-sw-01", "label": "SearchWeb", "kind": "clear", "query": "What time does the sun set in Tokyo today?"},
+    {"id": "h-sw-02", "label": "SearchWeb", "kind": "clear", "query": "Show me the latest headlines about the European Union."},
+    {"id": "h-sw-03", "label": "SearchWeb", "kind": "clear", "query": "What is Tesla's stock price right now?"},
+    {"id": "h-sw-04", "label": "SearchWeb", "kind": "clear", "query": "Find flights from Mumbai to Dubai next Friday."},
+    {"id": "h-sw-05", "label": "SearchWeb", "kind": "clear", "query": "Which team is top of the Premier League table this week?"},
+    {"id": "h-sw-06", "label": "SearchWeb", "kind": "boundary", "query": "What is the newest version of Node.js and what changed in it?", "note": "Programming topic, but the answer changes over time and needs a lookup."},
+    {"id": "h-sw-07", "label": "SearchWeb", "kind": "boundary", "query": "Are there any restaurants near Times Square that are open after midnight?", "note": "Conversational phrasing, but needs current local information."},
+    {"id": "h-sw-08", "label": "SearchWeb", "kind": "boundary", "query": "What is the current minimum wage in California?", "note": "Fact-like question whose answer changes yearly; answering from memory risks being out of date."},
+
+    {"id": "h-wc-01", "label": "WriteCode", "kind": "clear", "query": "Write a Python function that returns the nth Fibonacci number."},
+    {"id": "h-wc-02", "label": "WriteCode", "kind": "clear", "query": "Write a Go HTTP server that responds with 'hello' on /."},
+    {"id": "h-wc-03", "label": "WriteCode", "kind": "clear", "query": "Create a CSS class that centers a div horizontally and vertically."},
+    {"id": "h-wc-04", "label": "WriteCode", "kind": "clear", "query": "Write a PowerShell script that deletes files older than 30 days in a folder."},
+    {"id": "h-wc-05", "label": "WriteCode", "kind": "clear", "query": "Implement a stack class in TypeScript with push, pop and peek."},
+    {"id": "h-wc-06", "label": "WriteCode", "kind": "boundary", "query": "This throws KeyError sometimes, make it safe: value = config['timeout']", "note": "Bug-fix request on given code; wants corrected code, not an explanation or a search."},
+    {"id": "h-wc-07", "label": "WriteCode", "kind": "boundary", "query": "How would I send an email from Python using smtplib? Give me a working example.", "note": "Starts as a how-to question, but asks for a working example, i.e. code."},
+    {"id": "h-wc-08", "label": "WriteCode", "kind": "boundary", "query": "Turn this loop into a list comprehension: out = []\nfor x in xs:\n    out.append(x * 2)", "note": "Code transformation; output is code."},
+
+    {"id": "h-cv-01", "label": "Converse", "kind": "clear", "query": "Good evening! What's up?"},
+    {"id": "h-cv-02", "label": "Converse", "kind": "clear", "query": "Explain the difference between a virus and bacteria."},
+    {"id": "h-cv-03", "label": "Converse", "kind": "clear", "query": "Give me three ideas for a birthday party for a five-year-old."},
+    {"id": "h-cv-04", "label": "Converse", "kind": "clear", "query": "Rewrite this sentence to sound more formal: hey, can't make it tomorrow, sorry."},
+    {"id": "h-cv-05", "label": "Converse", "kind": "clear", "query": "What is 15% of 240? Show the steps."},
+    {"id": "h-cv-06", "label": "Converse", "kind": "boundary", "query": "Translate 'where is the train station?' into French.", "note": "Translation is answered from the model itself; no lookup or code needed."},
+    {"id": "h-cv-07", "label": "Converse", "kind": "boundary", "query": "Why does this SQL return duplicate rows: SELECT a.id FROM a JOIN b ON a.id = b.a_id", "note": "Code topic, but asks for an explanation, not new code."},
+    {"id": "h-cv-08", "label": "Converse", "kind": "boundary", "query": "What's the difference between a Python list and a tuple?", "note": "Stable conceptual knowledge; no current information needed."}
+  ]
+}

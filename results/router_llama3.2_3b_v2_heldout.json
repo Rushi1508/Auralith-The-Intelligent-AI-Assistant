@@ -1,0 +1,317 @@
+{
+  "model": "llama3.2:3b",
+  "provider": "ollama",
+  "temperature": 0.0,
+  "timestamp": "2026-11-21T22:12:56+00:00",
+  "summary": {
+    "n": 24,
+    "accuracy": 1.0,
+    "accuracy_ci95": [
+      1.0,
+      1.0
+    ],
+    "first_attempt_unparseable": 0,
+    "by_kind": {
+      "boundary": {
+        "n": 9,
+        "accuracy": 1.0
+      },
+      "clear": {
+        "n": 15,
+        "accuracy": 1.0
+      }
+    },
+    "confusion": {
+      "SearchWeb": {
+        "SearchWeb": 8,
+        "WriteCode": 0,
+        "Converse": 0
+      },
+      "WriteCode": {
+        "SearchWeb": 0,
+        "WriteCode": 8,
+        "Converse": 0
+      },
+      "Converse": {
+        "SearchWeb": 0,
+        "WriteCode": 0,
+        "Converse": 8
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "h-sw-01",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What time does the sun set in Tokyo today?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Tokyo sunset time today\"}",
+      "seconds": 4.2
+    },
+    {
+      "id": "h-sw-02",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Show me the latest headlines about the European Union.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"latest EU news\"}",
+      "seconds": 2.09
+    },
+    {
+      "id": "h-sw-03",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "What is Tesla's stock price right now?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Tesla stock price\"}",
+      "seconds": 2.4
+    },
+    {
+      "id": "h-sw-04",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Find flights from Mumbai to Dubai next Friday.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"flights from Mumbai to Dubai next Friday\"}",
+      "seconds": 3.64
+    },
+    {
+      "id": "h-sw-05",
+      "label": "SearchWeb",
+      "kind": "clear",
+      "query": "Which team is top of the Premier League table this week?",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Premier League table this week\"}",
+      "seconds": 3.15
+    },
+    {
+      "id": "h-sw-06",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "What is the newest version of Node.js and what changed in it?",
+      "note": "Programming topic, but the answer changes over time and needs a lookup.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"Node.js latest version changes\"}",
+      "seconds": 3.9
+    },
+    {
+      "id": "h-sw-07",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "Are there any restaurants near Times Square that are open after midnight?",
+      "note": "Conversational phrasing, but needs current local information.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"restaurants near Times Square open after midnight\"}",
+      "seconds": 3.45
+    },
+    {
+      "id": "h-sw-08",
+      "label": "SearchWeb",
+      "kind": "boundary",
+      "query": "What is the current minimum wage in California?",
+      "note": "Fact-like question whose answer changes yearly; answering from memory risks being out of date.",
+      "first": "SearchWeb",
+      "final": "SearchWeb",
+      "retries": 0,
+      "raw": "{\"action\": \"SearchWeb\", \"parameters\": \"California minimum wage\"}",
+      "seconds": 2.62
+    },
+    {
+      "id": "h-wc-01",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a Python function that returns the nth Fibonacci number.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"def fibonacci(n): return [0, 1][n % 2]\"}",
+      "seconds": 3.77
+    },
+    {
+      "id": "h-wc-02",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a Go HTTP server that responds with 'hello' on /.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"package main\\nimport \\\"net/http\\\"\\nfunc helloHandler(w http.ResponseWriter, r *http.Request) {\\n    if r.URL.Path == \\\"/\\\" {\\n        w.Write([]byte(\\\"hello\\\"))\\n    }\\n}\\nfunc main() {\\n    http.ListenAndServe(\":8080\", nil)\\n}\"}",
+      "seconds": 8.98
+    },
+    {
+      "id": "h-wc-03",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Create a CSS class that centers a div horizontally and vertically.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"div { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }\"}",
+      "seconds": 4.85
+    },
+    {
+      "id": "h-wc-04",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Write a PowerShell script that deletes files older than 30 days in a folder.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"Get-ChildItem -Path C:\\\\folder\\\\ -Recurse | Where-Object {$_.LastWriteTime -lt (Get-Date).AddDays(-30)} | Remove-Item\"}",
+      "seconds": 7.07
+    },
+    {
+      "id": "h-wc-05",
+      "label": "WriteCode",
+      "kind": "clear",
+      "query": "Implement a stack class in TypeScript with push, pop and peek.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"Implement a stack class in TypeScript with push, pop and peek.\"}",
+      "seconds": 3.54
+    },
+    {
+      "id": "h-wc-06",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "This throws KeyError sometimes, make it safe: value = config['timeout']",
+      "note": "Bug-fix request on given code; wants corrected code, not an explanation or a search.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"value = config.get('timeout', 30)\"}",
+      "seconds": 3.34
+    },
+    {
+      "id": "h-wc-07",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "How would I send an email from Python using smtplib? Give me a working example.",
+      "note": "Starts as a how-to question, but asks for a working example, i.e. code.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"import smtplib\\nfrom email.mime.text import MIMEText\\n# Replace with your sender's email and password\\nsender_email = 'your_email@gmail.com'\\npassword = 'your_password'\\n# Replace with the recipient's email\\nrecipient_email = 'recipient@example.com'\\n# Define the message body\\nmessage_body = 'Hello, this is a test email sent from Python using smtplib.'\\n# Create a text message object\\nmsg = MIMEText(message_body)\\nmsg['Subject'] = 'Test Email from Python'\\n",
+      "seconds": 20.86
+    },
+    {
+      "id": "h-wc-08",
+      "label": "WriteCode",
+      "kind": "boundary",
+      "query": "Turn this loop into a list comprehension: out = []\nfor x in xs:\n    out.append(x * 2)",
+      "note": "Code transformation; output is code.",
+      "first": "WriteCode",
+      "final": "WriteCode",
+      "retries": 0,
+      "raw": "{\"action\": \"WriteCode\", \"parameters\": \"out = [x * 2 for x in xs]\"}",
+      "seconds": 3.7
+    },
+    {
+      "id": "h-cv-01",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Good evening! What's up?",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.05
+    },
+    {
+      "id": "h-cv-02",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Explain the difference between a virus and bacteria.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Explain the difference between a virus and bacteria.\"}",
+      "seconds": 3.27
+    },
+    {
+      "id": "h-cv-03",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Give me three ideas for a birthday party for a five-year-old.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.23
+    },
+    {
+      "id": "h-cv-04",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "Rewrite this sentence to sound more formal: hey, can't make it tomorrow, sorry.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"Rewrite a casual apology in a more formal tone\"}",
+      "seconds": 3.53
+    },
+    {
+      "id": "h-cv-05",
+      "label": "Converse",
+      "kind": "clear",
+      "query": "What is 15% of 240? Show the steps.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"What is 15% of 240? Show the steps.\"}",
+      "seconds": 3.58
+    },
+    {
+      "id": "h-cv-06",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Translate 'where is the train station?' into French.",
+      "note": "Translation is answered from the model itself; no lookup or code needed.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.05
+    },
+    {
+      "id": "h-cv-07",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "Why does this SQL return duplicate rows: SELECT a.id FROM a JOIN b ON a.id = b.a_id",
+      "note": "Code topic, but asks for an explanation, not new code.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"SQL duplicate rows explanation\"}",
+      "seconds": 3.02
+    },
+    {
+      "id": "h-cv-08",
+      "label": "Converse",
+      "kind": "boundary",
+      "query": "What's the difference between a Python list and a tuple?",
+      "note": "Stable conceptual knowledge; no current information needed.",
+      "first": "Converse",
+      "final": "Converse",
+      "retries": 0,
+      "raw": "{\"action\": \"Converse\", \"parameters\": \"\"}",
+      "seconds": 2.09
+    }
+  ]
+}
