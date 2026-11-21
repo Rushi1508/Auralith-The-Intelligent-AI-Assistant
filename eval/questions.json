@@ -1,297 +1,2134 @@
 {
-  "schema_version": "1.0",
-  "description": "Auralith retrieval evaluation set. 28 questions over 3 open-access arXiv papers. Every answer and page label was transcribed by reading the extracted page text of the pinned PDF bytes (see eval/corpus/fetch_corpus.py for SHA-256 pins). Page numbers are 1-indexed and match auralith.ingest.load_pdf, which converts PyPDFLoader's 0-indexed pages.",
+  "schema_version": "2.0",
+  "description": "Auralith evaluation set v2. 142 questions over 3 open-access arXiv papers, written fresh on 2026-11-21 with no question carried over from v1 (v1 is in git history). Every answer and page label was transcribed from the extracted page text of the pinned PDF bytes (see eval/corpus/fetch_corpus.py). Page numbers are 1-indexed and match auralith.ingest.load_pdf. IDs carry a v2- prefix so run checkpoints keyed by v1 IDs can never be reused for different questions.",
   "labelling_notes": [
-    "relevant_pages lists EVERY page that independently answers the question. Retrieving any one of them counts as a hit, so a fact stated in both an abstract and a results table is not penalised for landing on either.",
-    "answer_keys are the specific tokens a correct answer must contain. They are used for a cheap deterministic keyword check that runs alongside the LLM judge, so judge drift can be detected rather than trusted.",
-    "type slices the results. 'lexical' questions hinge on a rare exact token and are where BM25 is expected to beat dense retrieval; 'conceptual' questions are paraphrase-heavy and are where dense is expected to win. Stating these predictions up front means Phase C can be evaluated against them rather than rationalised after the fact.",
-    "answerable=false questions have no answer anywhere in the corpus. The correct behaviour is to emit NOT_IN_CONTEXT. Without these, a pipeline that confidently fabricates an answer to everything scores identically to one that knows when to stop."
+    "relevant_pages lists EVERY page that independently answers the question. Retrieving any one of them counts as a hit.",
+    "answer_keys are case-insensitive substrings a correct answer must contain, used for a deterministic keyword check alongside the LLM judge.",
+    "type slices the results: factoid (one fact), multi-part (two or more facts that must all be present, the 3B generator's known weak spot), conceptual (paraphrase-heavy why/how), lexical (hinges on a rare exact token), cross-document (needs pages from two papers; extra_relevant names the second), unanswerable (correct output is NOT_IN_CONTEXT).",
+    "Unanswerable questions are phrased to look like answerable ones, so a pipeline that pattern-matches will fabricate."
   ],
   "questions": [
     {
-      "id": "attn-001",
-      "question": "How many identical layers are stacked in the Transformer encoder?",
-      "answer": "Six. The encoder is composed of a stack of N = 6 identical layers.",
-      "answer_keys": ["6"],
+      "id": "v2-attn-01",
+      "question": "What is d_model, the output dimension shared by every sub-layer and the embedding layers in the Transformer?",
+      "answer": "d_model = 512.",
+      "answer_keys": [
+        "512"
+      ],
       "doc_id": "attention",
-      "relevant_pages": [3],
+      "relevant_pages": [
+        3,
+        5
+      ],
       "type": "factoid",
       "answerable": true
     },
     {
-      "id": "attn-002",
-      "question": "What BLEU score did the big Transformer model achieve on the WMT 2014 English-to-German translation task?",
-      "answer": "28.4 BLEU, improving over the previous best results (including ensembles) by over 2 BLEU.",
-      "answer_keys": ["28.4"],
+      "id": "v2-attn-02",
+      "question": "Besides the two sub-layers found in every encoder layer, what third sub-layer does each decoder layer contain?",
+      "answer": "A multi-head attention sub-layer over the output of the encoder stack (encoder-decoder attention).",
+      "answer_keys": [
+        "encoder"
+      ],
       "doc_id": "attention",
-      "relevant_pages": [1, 8],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "attn-003",
-      "question": "How many attention heads does the base Transformer use, and what are the key and value dimensions per head?",
-      "answer": "h = 8 parallel attention heads, with d_k = d_v = d_model / h = 64.",
-      "answer_keys": ["8", "64"],
-      "doc_id": "attention",
-      "relevant_pages": [5],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "attn-004",
-      "question": "What is the inner-layer dimensionality of the position-wise feed-forward network?",
-      "answer": "d_ff = 2048, while the input and output dimensionality is d_model = 512.",
-      "answer_keys": ["2048"],
-      "doc_id": "attention",
-      "relevant_pages": [5],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "attn-005",
-      "question": "Why does scaled dot-product attention divide the dot products by the square root of d_k?",
-      "answer": "For large values of d_k the dot products grow large in magnitude, which pushes the softmax into regions where it has extremely small gradients. Scaling by 1/sqrt(d_k) counteracts this.",
-      "answer_keys": ["softmax", "gradient"],
-      "doc_id": "attention",
-      "relevant_pages": [4],
+      "relevant_pages": [
+        3
+      ],
       "type": "conceptual",
       "answerable": true
     },
     {
-      "id": "attn-006",
-      "question": "What optimizer did the Transformer authors use, and what beta and epsilon values?",
-      "answer": "Adam, with beta_1 = 0.9, beta_2 = 0.98 and epsilon = 10^-9.",
-      "answer_keys": ["Adam", "0.9", "0.98"],
+      "id": "v2-attn-03",
+      "question": "Why is the self-attention in the Transformer decoder masked?",
+      "answer": "To prevent positions from attending to subsequent positions, so the prediction for position i depends only on known outputs before i. This preserves the auto-regressive property; illegal connections are set to -infinity before the softmax.",
+      "answer_keys": [
+        "subsequent"
+      ],
       "doc_id": "attention",
-      "relevant_pages": [7],
+      "relevant_pages": [
+        3,
+        5
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-04",
+      "question": "How is the output of each Transformer sub-layer computed with respect to its residual connection and normalization?",
+      "answer": "LayerNorm(x + Sublayer(x)): a residual connection around the sub-layer followed by layer normalization.",
+      "answer_keys": [
+        "layernorm"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        3
+      ],
       "type": "factoid",
       "answerable": true
     },
     {
-      "id": "attn-007",
-      "question": "How many warmup steps were used in the Transformer learning rate schedule?",
-      "answer": "warmup_steps = 4000.",
-      "answer_keys": ["4000"],
+      "id": "v2-attn-05",
+      "question": "Write the formula the Transformer paper gives for Attention(Q, K, V).",
+      "answer": "Attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V.",
+      "answer_keys": [
+        "softmax"
+      ],
       "doc_id": "attention",
-      "relevant_pages": [7],
+      "relevant_pages": [
+        4
+      ],
       "type": "lexical",
       "answerable": true
     },
     {
-      "id": "attn-008",
-      "question": "What hardware were the Transformer base models trained on, and for how long?",
-      "answer": "One machine with 8 NVIDIA P100 GPUs. The base models trained for 100,000 steps, about 12 hours; the big models for 300,000 steps, about 3.5 days.",
-      "answer_keys": ["P100", "12 hours"],
+      "id": "v2-attn-06",
+      "question": "How does dot-product attention compare with additive attention in speed and in quality?",
+      "answer": "They have similar theoretical complexity, but dot-product attention is much faster and more space-efficient because it uses optimized matrix multiplication. For small d_k they perform similarly; for larger d_k additive attention outperforms dot-product attention without scaling.",
+      "answer_keys": [
+        "faster",
+        "additive"
+      ],
       "doc_id": "attention",
-      "relevant_pages": [7],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "attn-009",
-      "question": "According to the complexity table, what is the maximum path length of a self-attention layer compared to a recurrent layer?",
-      "answer": "Self-attention has maximum path length O(1); a recurrent layer has O(n). Self-attention also needs O(1) sequential operations versus O(n) for recurrent.",
-      "answer_keys": ["O(1)", "O(n)"],
-      "doc_id": "attention",
-      "relevant_pages": [6],
+      "relevant_pages": [
+        4
+      ],
       "type": "conceptual",
       "answerable": true
     },
     {
-      "id": "bert-001",
-      "question": "What are the layer count, hidden size, attention heads, and total parameters of BERT-BASE and BERT-LARGE?",
-      "answer": "BERT-BASE: L=12, H=768, A=12, 110M parameters. BERT-LARGE: L=24, H=1024, A=16, 340M parameters.",
-      "answer_keys": ["110M", "340M"],
-      "doc_id": "bert",
-      "relevant_pages": [3],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "bert-002",
-      "question": "What percentage of WordPiece tokens does BERT mask during masked language model pre-training?",
-      "answer": "15% of all WordPiece tokens in each sequence, chosen at random.",
-      "answer_keys": ["15%"],
-      "doc_id": "bert",
-      "relevant_pages": [4],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "bert-003",
-      "question": "When BERT selects a token position for masking, how is it replaced?",
-      "answer": "80% of the time with the [MASK] token, 10% of the time with a random token, and 10% of the time the token is left unchanged.",
-      "answer_keys": ["80%", "10%"],
-      "doc_id": "bert",
-      "relevant_pages": [4],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "bert-004",
-      "question": "What tokenization scheme and vocabulary size does BERT use?",
-      "answer": "WordPiece embeddings with a 30,000 token vocabulary.",
-      "answer_keys": ["WordPiece", "30,000"],
-      "doc_id": "bert",
-      "relevant_pages": [4],
+      "id": "v2-attn-07",
+      "question": "In the footnote on why dot products grow large, what mean and variance does q·k have when the components of q and k are independent with mean 0 and variance 1?",
+      "answer": "Mean 0 and variance d_k.",
+      "answer_keys": [
+        "variance"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        4
+      ],
       "type": "lexical",
       "answerable": true
     },
     {
-      "id": "bert-005",
-      "question": "Which two unsupervised tasks is BERT pre-trained on?",
-      "answer": "Masked LM (MLM) and Next Sentence Prediction (NSP).",
-      "answer_keys": ["Masked", "Next Sentence Prediction"],
-      "doc_id": "bert",
-      "relevant_pages": [4],
+      "id": "v2-attn-08",
+      "question": "What does multi-head attention allow that a single attention head does not?",
+      "answer": "It lets the model jointly attend to information from different representation subspaces at different positions; with a single head, averaging inhibits this.",
+      "answer_keys": [
+        "subspace"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
       "type": "conceptual",
       "answerable": true
     },
     {
-      "id": "bert-006",
-      "question": "What corpora were used to pre-train BERT, and how large were they?",
-      "answer": "BooksCorpus (800M words) and English Wikipedia (2,500M words).",
-      "answer_keys": ["BooksCorpus", "800M", "2,500M"],
-      "doc_id": "bert",
-      "relevant_pages": [5],
+      "id": "v2-attn-09",
+      "question": "In which three ways does the Transformer use multi-head attention?",
+      "answer": "(1) Encoder-decoder attention: queries from the previous decoder layer, keys and values from the encoder output. (2) Encoder self-attention: keys, values and queries all from the previous encoder layer. (3) Decoder self-attention, masked so each position attends only to positions up to and including itself.",
+      "answer_keys": [
+        "encoder-decoder",
+        "self-attention"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-10",
+      "question": "What activation function does the position-wise feed-forward network use, and what is another way the paper describes that network?",
+      "answer": "ReLU between two linear transformations: FFN(x) = max(0, xW1 + b1)W2 + b2. It can also be described as two convolutions with kernel size 1.",
+      "answer_keys": [
+        "relu",
+        "kernel size 1"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-11",
+      "question": "Which weights does the Transformer share between its embedding layers and output, and what are the embedding weights multiplied by?",
+      "answer": "The same weight matrix is shared between the two embedding layers and the pre-softmax linear transformation; in the embedding layers the weights are multiplied by sqrt(d_model).",
+      "answer_keys": [
+        "pre-softmax"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
       "type": "factoid",
       "answerable": true
     },
     {
-      "id": "bert-007",
-      "question": "What GLUE score did BERT-LARGE obtain on the official leaderboard, and what did OpenAI GPT obtain?",
-      "answer": "BERT-LARGE obtained 80.5; OpenAI GPT obtained 72.8 as of the date of writing.",
-      "answer_keys": ["80.5", "72.8"],
-      "doc_id": "bert",
-      "relevant_pages": [6],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "bert-008",
-      "question": "What batch size and how many training steps were used for BERT pre-training, and how long did it take?",
-      "answer": "Batch size of 256 sequences (128,000 tokens per batch) for 1,000,000 steps, roughly 40 epochs over the 3.3 billion word corpus. Each pre-training run took 4 days on 16 Cloud TPUs (64 TPU chips total).",
-      "answer_keys": ["256", "1,000,000", "4 days"],
-      "doc_id": "bert",
-      "relevant_pages": [13],
+      "id": "v2-attn-12",
+      "question": "According to Table 1, what is the per-layer complexity and the number of sequential operations for a self-attention layer versus a recurrent layer?",
+      "answer": "Self-attention: O(n^2 · d) per layer with O(1) sequential operations. Recurrent: O(n · d^2) per layer with O(n) sequential operations.",
+      "answer_keys": [
+        "o(1)",
+        "o(n)"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
       "type": "factoid",
       "answerable": true,
-      "notes": "Deliberately buried in Appendix A.2 on page 13, far from the main results. Tests whether retrieval reaches past the abstract and results tables."
+      "notes": "Keys are the sequential-operations column; the complexity notation varies too much for substring keys."
     },
     {
-      "id": "rag-001",
-      "question": "What are the two RAG model formulations introduced in the paper, and how do they differ?",
-      "answer": "RAG-Sequence uses the same retrieved document to generate the complete output sequence, while RAG-Token can draw a different latent document for each target token and marginalizes accordingly.",
-      "answer_keys": ["RAG-Sequence", "RAG-Token"],
-      "doc_id": "rag",
-      "relevant_pages": [1, 3],
-      "type": "conceptual",
-      "answerable": true
-    },
-    {
-      "id": "rag-002",
-      "question": "Which retriever and which generator does RAG use?",
-      "answer": "The retriever is DPR (Dense Passage Retriever), a BERT-BASE bi-encoder; the generator is BART-large.",
-      "answer_keys": ["DPR", "BART"],
-      "doc_id": "rag",
-      "relevant_pages": [2, 3],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "rag-003",
-      "question": "How many parameters does the BART-large generator used in RAG have?",
-      "answer": "400M parameters (the paper gives 400M on p.3 and the more precise 406M on p.18).",
-      "answer_keys": ["400M"],
-      "doc_id": "rag",
-      "relevant_pages": [3],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "rag-004",
-      "question": "Which Wikipedia dump does RAG index, how is it chunked, and how many documents result?",
-      "answer": "The December 2018 dump. Each article is split into disjoint 100-word chunks, totalling 21M documents.",
-      "answer_keys": ["December 2018", "100-word", "21M"],
-      "doc_id": "rag",
-      "relevant_pages": [4],
-      "type": "factoid",
-      "answerable": true
-    },
-    {
-      "id": "rag-005",
-      "question": "What library and approximation does RAG use to build its MIPS index?",
-      "answer": "FAISS, with a Hierarchical Navigable Small World (HNSW) approximation for fast retrieval.",
-      "answer_keys": ["FAISS", "Hierarchical Navigable Small World"],
-      "doc_id": "rag",
-      "relevant_pages": [4],
+      "id": "v2-attn-13",
+      "question": "What functions does the Transformer use for its positional encodings?",
+      "answer": "Sine and cosine functions of different frequencies: PE(pos, 2i) = sin(pos / 10000^(2i/d_model)) and PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model)).",
+      "answer_keys": [
+        "sin",
+        "cos",
+        "10000"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
       "type": "lexical",
       "answerable": true
     },
     {
-      "id": "rag-006",
-      "question": "During RAG training, which components are fine-tuned and which are held fixed?",
-      "answer": "The query encoder BERT_q and the BART generator are fine-tuned. The document encoder BERT_d and the document index are kept fixed, because updating the document encoder would require periodically re-indexing all documents.",
-      "answer_keys": ["query encoder", "fixed"],
-      "doc_id": "rag",
-      "relevant_pages": [4],
+      "id": "v2-attn-14",
+      "question": "Why did the authors choose sinusoidal positional encodings over learned positional embeddings?",
+      "answer": "The two produced nearly identical results (Table 3 row E), and the sinusoidal version may allow the model to extrapolate to sequence lengths longer than those seen during training.",
+      "answer_keys": [
+        "extrapolate"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
       "type": "conceptual",
       "answerable": true
     },
     {
-      "id": "rag-007",
-      "question": "What are the two decoding procedures RAG-Sequence uses called?",
-      "answer": "Thorough Decoding and Fast Decoding.",
-      "answer_keys": ["Thorough Decoding", "Fast Decoding"],
-      "doc_id": "rag",
-      "relevant_pages": [4],
-      "type": "lexical",
-      "answerable": true
-    },
-    {
-      "id": "rag-008",
-      "question": "In the index hot-swapping experiment, how accurately did RAG answer questions about world leaders when the index year matched the question year, and when it did not?",
-      "answer": "70% correct using the 2016 index for 2016 leaders and 68% using the 2018 index for 2018 leaders. With mismatched indices accuracy collapsed to 12% (2018 index, 2016 leaders) and 4% (2016 index, 2018 leaders).",
-      "answer_keys": ["70%", "68%"],
-      "doc_id": "rag",
-      "relevant_pages": [8],
+      "id": "v2-attn-15",
+      "question": "Over what range do the wavelengths of the sinusoidal positional encodings form a geometric progression?",
+      "answer": "From 2π to 10000 · 2π.",
+      "answer_keys": [
+        "10000"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
       "type": "factoid",
       "answerable": true
     },
     {
-      "id": "xdoc-001",
-      "question": "BERT's architecture is based on the Transformer encoder from an earlier paper. Which paper is that, and how many layers did that paper's base encoder stack use?",
-      "answer": "Vaswani et al. (2017), 'Attention Is All You Need'. Its base encoder used a stack of N = 6 identical layers.",
-      "answer_keys": ["Vaswani", "6"],
+      "id": "v2-attn-16",
+      "question": "Under what condition are self-attention layers computationally faster than recurrent layers?",
+      "answer": "When the sequence length n is smaller than the representation dimensionality d, which is most often the case for sentence representations such as word-piece and byte-pair representations.",
+      "answer_keys": [
+        "smaller"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6,
+        7
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-17",
+      "question": "What is restricted self-attention, and what does it do to the maximum path length?",
+      "answer": "Self-attention restricted to a neighborhood of size r around the respective output position, intended for very long sequences. It increases the maximum path length to O(n/r).",
+      "answer_keys": [
+        "n/r"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6,
+        7
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-18",
+      "question": "How many convolutional layers are needed to connect all pairs of input and output positions with contiguous kernels versus dilated convolutions?",
+      "answer": "O(n/k) layers with contiguous kernels and O(log_k(n)) with dilated convolutions.",
+      "answer_keys": [
+        "n/k",
+        "log"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-19",
+      "question": "How large was the WMT 2014 English-German training set, and what encoding and vocabulary size were used for it?",
+      "answer": "About 4.5 million sentence pairs, encoded with byte-pair encoding with a shared source-target vocabulary of about 37000 tokens.",
+      "answer_keys": [
+        "4.5 million",
+        "37000"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-20",
+      "question": "How large was the WMT 2014 English-French dataset, and what vocabulary was used for it?",
+      "answer": "36M sentences, with tokens split into a 32000 word-piece vocabulary.",
+      "answer_keys": [
+        "36m",
+        "32000"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-21",
+      "question": "Approximately how many tokens did each Transformer training batch contain?",
+      "answer": "About 25000 source tokens and 25000 target tokens.",
+      "answer_keys": [
+        "25000"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-22",
+      "question": "How long did each training step take for the base and for the big Transformer models?",
+      "answer": "About 0.4 seconds per step for the base models and 1.0 seconds for the big models.",
+      "answer_keys": [
+        "0.4",
+        "1.0"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-23",
+      "question": "What residual dropout rate and what label smoothing value were used for the base Transformer?",
+      "answer": "Residual dropout P_drop = 0.1 and label smoothing epsilon_ls = 0.1.",
+      "answer_keys": [
+        "0.1"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-24",
+      "question": "What effect does label smoothing have on the Transformer's perplexity and on its BLEU score?",
+      "answer": "It hurts perplexity, because the model learns to be more unsure, but improves accuracy and BLEU score.",
+      "answer_keys": [
+        "perplexity",
+        "bleu"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-25",
+      "question": "What BLEU scores does Table 2 report for the Transformer base model on English-to-German and English-to-French?",
+      "answer": "27.3 BLEU on EN-DE and 38.1 BLEU on EN-FR.",
+      "answer_keys": [
+        "27.3",
+        "38.1"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-26",
+      "question": "How were checkpoints averaged for the base and big translation models, and what beam size and length penalty were used?",
+      "answer": "Base models averaged the last 5 checkpoints (written at 10-minute intervals); big models averaged the last 20. Beam search used a beam size of 4 and length penalty alpha = 0.6.",
+      "answer_keys": [
+        "20",
+        "0.6"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-27",
+      "question": "What maximum output length did the Transformer use during translation inference?",
+      "answer": "Input length + 50, terminating early when possible.",
+      "answer_keys": [
+        "50"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-28",
+      "question": "What training cost in FLOPs does Table 2 report for the Transformer base and big models?",
+      "answer": "3.3 · 10^18 FLOPs for the base model and 2.3 · 10^19 for the big model.",
+      "answer_keys": [
+        "3.3",
+        "2.3"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-29",
+      "question": "What model and training data were used for the English constituency parsing experiments?",
+      "answer": "A 4-layer Transformer with d_model = 1024, trained on the Wall Street Journal portion of the Penn Treebank (about 40K sentences), and in a semi-supervised setting with about 17M sentences.",
+      "answer_keys": [
+        "1024",
+        "40k"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        9
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-30",
+      "question": "What F1 did the 4-layer Transformer achieve on WSJ Section 23 in the WSJ-only and the semi-supervised settings?",
+      "answer": "91.3 F1 WSJ-only and 92.7 F1 semi-supervised.",
+      "answer_keys": [
+        "91.3",
+        "92.7"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        10
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-31",
+      "question": "What did varying the number of attention heads in Table 3 rows (A) show?",
+      "answer": "Single-head attention is 0.9 BLEU worse than the best setting, but quality also drops off with too many heads.",
+      "answer_keys": [
+        "0.9"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        9
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-32",
+      "question": "What did the authors conclude from reducing the attention key size d_k in Table 3 rows (B)?",
+      "answer": "Reducing d_k hurts model quality, suggesting that determining compatibility is not easy and that a more sophisticated compatibility function than dot product may be beneficial.",
+      "answer_keys": [
+        "compatibility"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        9
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-33",
+      "question": "What are the d_model, d_ff, number of heads, dropout and parameter count of the big Transformer in Table 3?",
+      "answer": "d_model = 1024, d_ff = 4096, h = 16, P_drop = 0.3, trained 300K steps, 213 million parameters.",
+      "answer_keys": [
+        "4096",
+        "213"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        9
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-34",
+      "question": "How many parameters does the base Transformer have according to Table 3?",
+      "answer": "65 million.",
+      "answer_keys": [
+        "65"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        9
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-35",
+      "question": "Where did the authors make the code used to train and evaluate the Transformer available?",
+      "answer": "In the tensor2tensor repository: https://github.com/tensorflow/tensor2tensor.",
+      "answer_keys": [
+        "tensor2tensor"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        10
+      ],
+      "type": "lexical",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-36",
+      "question": "In the attention visualization of Figure 3, what long-distance dependency do many encoder heads attend to?",
+      "answer": "In layer 5 of 6, many heads attend from the verb 'making' to a distant dependency, completing the phrase 'making...more difficult'.",
+      "answer_keys": [
+        "more difficult"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        13
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-attn-37",
+      "question": "Which linguistic task do the two attention heads shown in Figure 4 appear to be involved in?",
+      "answer": "Anaphora resolution (heads 5 and 6 in layer 5, with very sharp attention from the word 'its').",
+      "answer_keys": [
+        "anaphora"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        14
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-01",
+      "question": "What does the acronym BERT stand for?",
+      "answer": "Bidirectional Encoder Representations from Transformers.",
+      "answer_keys": [
+        "bidirectional encoder representations"
+      ],
       "doc_id": "bert",
-      "relevant_pages": [3],
-      "extra_relevant": {"attention": [3]},
+      "relevant_pages": [
+        1
+      ],
+      "type": "lexical",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-02",
+      "question": "What MultiNLI accuracy, SQuAD v1.1 Test F1 and SQuAD v2.0 Test F1 does the BERT abstract report?",
+      "answer": "MultiNLI accuracy 86.7%, SQuAD v1.1 Test F1 93.2 and SQuAD v2.0 Test F1 83.1.",
+      "answer_keys": [
+        "86.7",
+        "93.2",
+        "83.1"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        1
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-03",
+      "question": "What are the two existing strategies for applying pre-trained language representations to downstream tasks, and which model exemplifies each?",
+      "answer": "The feature-based approach, e.g. ELMo, and the fine-tuning approach, e.g. OpenAI GPT.",
+      "answer_keys": [
+        "elmo",
+        "gpt"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        1
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-04",
+      "question": "What major limitation of standard language models does BERT argue restricts pre-trained representations?",
+      "answer": "Standard language models are unidirectional (e.g. GPT's left-to-right architecture where each token only attends to previous tokens), which limits the architectures usable in pre-training and is harmful for token-level tasks like question answering that need context from both directions.",
+      "answer_keys": [
+        "unidirectional"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        1
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-05",
+      "question": "What feed-forward (filter) size does BERT use relative to its hidden size?",
+      "answer": "4H: 3072 for H = 768 and 4096 for H = 1024.",
+      "answer_keys": [
+        "3072",
+        "4096"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        3
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-06",
+      "question": "Why was BERT-BASE given the model size that it has?",
+      "answer": "It was chosen to have the same model size as OpenAI GPT for comparison purposes.",
+      "answer_keys": [
+        "gpt"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        3
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-07",
+      "question": "What is the critical difference between BERT's Transformer and GPT's Transformer?",
+      "answer": "BERT uses bidirectional self-attention, while GPT uses constrained self-attention where every token can only attend to context to its left.",
+      "answer_keys": [
+        "bidirectional",
+        "left"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        3,
+        13
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-08",
+      "question": "What special token begins every BERT input sequence, and what is its final hidden state used for?",
+      "answer": "The [CLS] classification token; its final hidden state is used as the aggregate sequence representation for classification tasks.",
+      "answer_keys": [
+        "[cls]",
+        "classification"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4,
+        5
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-09",
+      "question": "In what two ways does BERT differentiate the two sentences of a packed sentence pair?",
+      "answer": "It separates them with a special [SEP] token, and it adds a learned embedding to every token indicating whether it belongs to sentence A or sentence B.",
+      "answer_keys": [
+        "[sep]",
+        "embedding"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-10",
+      "question": "Which embeddings are summed to form a BERT token's input representation?",
+      "answer": "The token embedding, the segment embedding and the position embedding.",
+      "answer_keys": [
+        "token",
+        "segment",
+        "position"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4,
+        5
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-11",
+      "question": "Why can't standard conditional language models be trained bidirectionally?",
+      "answer": "Bidirectional conditioning would allow each word to indirectly 'see itself', so the model could trivially predict the target word in a multi-layered context.",
+      "answer_keys": [
+        "see itself"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-12",
+      "question": "How are sentence pairs chosen for the next sentence prediction task, and what are the labels?",
+      "answer": "50% of the time sentence B is the actual next sentence after A (labelled IsNext), and 50% of the time it is a random sentence from the corpus (labelled NotNext).",
+      "answer_keys": [
+        "50%",
+        "isnext",
+        "notnext"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4,
+        13
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-13",
+      "question": "What accuracy does the final BERT model achieve on next sentence prediction?",
+      "answer": "97%-98%.",
+      "answer_keys": [
+        "97"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-14",
+      "question": "Why does BERT use a document-level corpus rather than a shuffled sentence-level corpus like the Billion Word Benchmark?",
+      "answer": "To extract long contiguous sequences.",
+      "answer_keys": [
+        "contiguous"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        5
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-15",
+      "question": "How long does it take to replicate the paper's fine-tuning results starting from the pre-trained model?",
+      "answer": "At most 1 hour on a single Cloud TPU, or a few hours on a GPU.",
+      "answer_keys": [
+        "1 hour",
+        "tpu"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        5
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-16",
+      "question": "What batch size, number of epochs and learning-rate candidates were used to fine-tune BERT on GLUE?",
+      "answer": "Batch size 32, 3 epochs, with the best learning rate selected on Dev among 5e-5, 4e-5, 3e-5 and 2e-5.",
+      "answer_keys": [
+        "32",
+        "5e-5",
+        "2e-5"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-17",
+      "question": "What average GLUE scores do BERT-BASE and BERT-LARGE get in Table 1?",
+      "answer": "79.6 for BERT-BASE and 82.1 for BERT-LARGE.",
+      "answer_keys": [
+        "79.6",
+        "82.1"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-18",
+      "question": "What did the authors do because BERT-LARGE fine-tuning was sometimes unstable on small datasets?",
+      "answer": "They ran several random restarts (same pre-trained checkpoint, different fine-tuning data shuffling and classifier initialization) and selected the best model on the Dev set.",
+      "answer_keys": [
+        "random restart"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-19",
+      "question": "Which new parameters does BERT introduce for SQuAD v1.1 fine-tuning, and with what epochs, learning rate and batch size?",
+      "answer": "Only a start vector S and an end vector E. Fine-tuned for 3 epochs with learning rate 5e-5 and batch size 32.",
+      "answer_keys": [
+        "start",
+        "end",
+        "5e-5"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-20",
+      "question": "What data augmentation did BERT use for its SQuAD v1.1 system?",
+      "answer": "It first fine-tuned on TriviaQA before fine-tuning on SQuAD.",
+      "answer_keys": [
+        "triviaqa"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-21",
+      "question": "How does BERT handle questions with no answer in SQuAD 2.0?",
+      "answer": "It treats them as having an answer span that starts and ends at the [CLS] token. It predicts a non-null answer only when the best non-null span score exceeds the null score S·C + E·C plus a threshold tau selected on the dev set to maximize F1.",
+      "answer_keys": [
+        "[cls]",
+        "threshold"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        7
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-22",
+      "question": "What epochs, learning rate and batch size were used to fine-tune BERT on SQuAD 2.0?",
+      "answer": "2 epochs, learning rate 5e-5, batch size 48.",
+      "answer_keys": [
+        "48"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        7
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-23",
+      "question": "What is the SWAG task and what Test accuracy did BERT-LARGE achieve on it?",
+      "answer": "SWAG has 113k sentence-pair completion examples for grounded commonsense inference: choose the most plausible of four continuations. BERT-LARGE reached 86.3% Test accuracy (86.6 Dev), +27.1% over ESIM+ELMo and +8.3% over OpenAI GPT.",
+      "answer_keys": [
+        "86.3"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        7
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-24",
+      "question": "In Table 2, what Dev F1 does single BERT-LARGE get on SQuAD 1.1, and what Test F1 does the ensemble with TriviaQA get?",
+      "answer": "90.9 Dev F1 for BERT-LARGE (Single), and 93.2 Test F1 for BERT-LARGE (Ens.+TriviaQA).",
+      "answer_keys": [
+        "90.9",
+        "93.2"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        7
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-25",
+      "question": "According to the pre-training task ablation, which tasks does removing next sentence prediction hurt significantly?",
+      "answer": "QNLI, MNLI and SQuAD 1.1.",
+      "answer_keys": [
+        "qnli",
+        "mnli",
+        "squad"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        8
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-26",
+      "question": "How does the left-to-right model without NSP compare with the bidirectional No-NSP model, and does adding a BiLSTM fix it?",
+      "answer": "The LTR model is worse on all tasks, with large drops on MRPC and SQuAD. Adding a randomly initialized BiLSTM significantly improves SQuAD but results stay far worse than the bidirectional models, and the BiLSTM hurts the GLUE tasks.",
+      "answer_keys": [
+        "mrpc",
+        "squad"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        8
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-27",
+      "question": "Why do the authors prefer one deep bidirectional model over concatenating separate left-to-right and right-to-left models as ELMo does?",
+      "answer": "(a) It would be twice as expensive; (b) it is non-intuitive for QA, since the right-to-left model could not condition the answer on the question; (c) it is strictly less powerful than a deep bidirectional model, which uses both left and right context at every layer.",
+      "answer_keys": [
+        "expensive"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        8
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-28",
+      "question": "According to BERT's model-size section, what were the largest Transformer in Vaswani et al. and the largest Transformer found in the literature?",
+      "answer": "Vaswani et al.'s largest was L=6, H=1024, A=16 with 100M parameters for the encoder; the largest in the literature was L=64, H=512, A=2 with 235M parameters (Al-Rfou et al., 2018).",
+      "answer_keys": [
+        "100m",
+        "235m"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-29",
+      "question": "In the model-size ablation (Table 6), what masked LM perplexity does the largest configuration reach?",
+      "answer": "3.23, for #L=24, #H=1024, #A=16.",
+      "answer_keys": [
+        "3.23"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        9
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-30",
+      "question": "In the feature-based NER experiments, which method performed best and how far behind full fine-tuning was it?",
+      "answer": "Concatenating the token representations from the top four hidden layers (96.1 Dev F1), only 0.3 F1 behind fine-tuning the entire model.",
+      "answer_keys": [
+        "four",
+        "0.3"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        9
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-31",
+      "question": "Which NER dataset was used to compare the feature-based and fine-tuning approaches, and which sub-token's representation feeds the classifier?",
+      "answer": "CoNLL-2003; the representation of the first sub-token is used as input to the token-level classifier (no CRF layer).",
+      "answer_keys": [
+        "conll-2003",
+        "first sub-token"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        9
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-32",
+      "question": "What advantages does the feature-based approach have over fine-tuning, according to the BERT paper?",
+      "answer": "Not all tasks can be easily represented by a Transformer encoder and may need a task-specific architecture; and there are major computational benefits to pre-computing an expensive representation of the training data once and running many cheaper experiments on top.",
+      "answer_keys": [
+        "pre-comput"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        9
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-33",
+      "question": "What optimizer settings were used for BERT pre-training?",
+      "answer": "Adam with learning rate 1e-4, beta1 = 0.9, beta2 = 0.999, L2 weight decay 0.01, learning-rate warmup over the first 10,000 steps and linear decay.",
+      "answer_keys": [
+        "1e-4",
+        "0.999",
+        "10,000"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-34",
+      "question": "Which activation function does BERT use, and why?",
+      "answer": "GELU rather than the standard ReLU, following OpenAI GPT.",
+      "answer_keys": [
+        "gelu"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-35",
+      "question": "On how many Cloud TPUs and TPU chips were BERT-BASE and BERT-LARGE pre-trained?",
+      "answer": "BERT-BASE on 4 Cloud TPUs in Pod configuration (16 TPU chips); BERT-LARGE on 16 Cloud TPUs (64 TPU chips).",
+      "answer_keys": [
+        "16",
+        "64"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-36",
+      "question": "What sequence-length schedule did BERT use to speed up pre-training?",
+      "answer": "Sequence length 128 for 90% of the steps, then 512 for the remaining 10% to learn the positional embeddings, because attention is quadratic in sequence length.",
+      "answer_keys": [
+        "128",
+        "512",
+        "90%"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-37",
+      "question": "What range of fine-tuning hyperparameters did the authors find to work well across all tasks?",
+      "answer": "Batch size 16 or 32; Adam learning rate 5e-5, 3e-5 or 2e-5; 2, 3 or 4 epochs. Dropout always 0.1.",
+      "answer_keys": [
+        "16",
+        "2e-5"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13,
+        14
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-38",
+      "question": "Why does the 10% random-token replacement in masked LM not seem to harm BERT's language understanding?",
+      "answer": "Random replacement only occurs for 1.5% of all tokens (10% of 15%).",
+      "answer_keys": [
+        "1.5%"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        12
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-39",
+      "question": "Besides bidirectionality, what training differences between BERT and OpenAI GPT does Appendix A.4 list?",
+      "answer": "GPT trained on BooksCorpus only, BERT on BooksCorpus and Wikipedia; GPT only introduces [SEP] and [CLS] at fine-tuning while BERT learns them and the A/B embeddings in pre-training; GPT used batches of 32,000 words versus BERT's 128,000 (both 1M steps); GPT used one fine-tuning learning rate of 5e-5 while BERT picks a task-specific one.",
+      "answer_keys": [
+        "32,000",
+        "128,000"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        14
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-40",
+      "question": "Does BERT really need 1M pre-training steps? What evidence does the paper give?",
+      "answer": "Yes: BERT-BASE achieves almost 1.0% additional MNLI accuracy when trained for 1M steps compared with 500k steps.",
+      "answer_keys": [
+        "1.0%"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        16
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-41",
+      "question": "In the masking-strategy ablation, which strategy was problematic and for which approach?",
+      "answer": "Using only the MASK strategy was problematic for the feature-based approach to NER; using only the RND strategy also performed much worse than BERT's mixed strategy. Fine-tuning was surprisingly robust.",
+      "answer_keys": [
+        "mask",
+        "feature-based"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        16
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-42",
+      "question": "Why was the WNLI dataset excluded from BERT's GLUE results?",
+      "answer": "The GLUE webpage notes problems with how the dataset was constructed, and every submitted system performed worse than the 65.1 majority-class baseline, so it was excluded to be fair to OpenAI GPT.",
+      "answer_keys": [
+        "65.1"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        15
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-43",
+      "question": "What is the QQP task in GLUE?",
+      "answer": "Quora Question Pairs: a binary classification task to determine whether two questions asked on Quora are semantically equivalent.",
+      "answer_keys": [
+        "quora"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        14
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-bert-44",
+      "question": "What does CoLA stand for and what does it test?",
+      "answer": "The Corpus of Linguistic Acceptability: a binary single-sentence task predicting whether an English sentence is linguistically acceptable.",
+      "answer_keys": [
+        "linguistic acceptability"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        15
+      ],
+      "type": "lexical",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-01",
+      "question": "On which three open-domain QA datasets do the RAG models achieve state-of-the-art results?",
+      "answer": "Open Natural Questions, WebQuestions and CuratedTrec.",
+      "answer_keys": [
+        "natural questions",
+        "webquestions",
+        "curatedtrec"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        2
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-02",
+      "question": "How close does RAG come to the state of the art on FEVER 3-way classification?",
+      "answer": "Within 4.3% of state-of-the-art pipeline models, which use strong retrieval supervision.",
+      "answer_keys": [
+        "4.3%"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        2,
+        6
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-03",
+      "question": "What are the parametric and the non-parametric memory in RAG?",
+      "answer": "The parametric memory is a pre-trained seq2seq model (the BART generator); the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever.",
+      "answer_keys": [
+        "wikipedia",
+        "seq2seq"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        1,
+        2,
+        3
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-04",
+      "question": "What downsides of purely parametric pre-trained language models does the RAG introduction list?",
+      "answer": "They cannot easily expand or revise their memory, cannot straightforwardly provide insight into their predictions, and may produce hallucinations.",
+      "answer_keys": [
+        "hallucinat"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        1
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-05",
+      "question": "Which two earlier models combine masked language models with a differentiable retriever, and what task had they explored?",
+      "answer": "REALM and ORQA; they had only explored open-domain extractive question answering.",
+      "answer_keys": [
+        "realm",
+        "orqa"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        1,
+        2
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-06",
+      "question": "What does MIPS stand for in the RAG paper, and what is it used for?",
+      "answer": "Maximum Inner Product Search, used to find the top-K documents for a query; it can be approximately solved in sub-linear time.",
+      "answer_keys": [
+        "maximum inner product search"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        2,
+        3
+      ],
+      "type": "lexical",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-07",
+      "question": "What architecture does the DPR retriever use?",
+      "answer": "A bi-encoder: a document encoder d(z) = BERT_d(z) and a query encoder q(x) = BERT_q(x), both based on BERT-BASE, with p(z|x) proportional to exp(d(z)^T q(x)).",
+      "answer_keys": [
+        "bi-encoder",
+        "bert"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-08",
+      "question": "On which datasets was the pre-trained DPR retriever trained to retrieve answer-containing documents?",
+      "answer": "TriviaQA and Natural Questions.",
+      "answer_keys": [
+        "triviaqa",
+        "natural questions"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3,
+        5
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-09",
+      "question": "How does RAG combine the input x with the retrieved content z when generating with BART?",
+      "answer": "It simply concatenates them.",
+      "answer_keys": [
+        "concatenat"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-10",
+      "question": "What objective and optimizer are used to train RAG?",
+      "answer": "Minimize the negative marginal log-likelihood of each target, using stochastic gradient descent with Adam.",
+      "answer_keys": [
+        "log-likelihood",
+        "adam"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3,
+        4
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-11",
+      "question": "Why does RAG not update the document encoder during training?",
+      "answer": "Updating BERT_d is costly because the document index would need to be periodically rebuilt, as REALM does; the authors found it unnecessary for strong performance.",
+      "answer_keys": [
+        "index"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-12",
+      "question": "How is the RAG-Token model decoded at test time?",
+      "answer": "As a standard autoregressive seq2seq generator whose transition probability marginalizes over the top-k documents, plugged into a standard beam decoder.",
+      "answer_keys": [
+        "beam"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-13",
+      "question": "How many documents are retrieved per query during RAG training?",
+      "answer": "k ∈ {5, 10}; k at test time is set using dev data. No significant difference was observed between 5 and 10.",
+      "answer_keys": [
+        "5",
+        "10"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4,
+        8
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-14",
+      "question": "Which four open-domain QA datasets does RAG evaluate on, and what metric is reported?",
+      "answer": "Natural Questions, TriviaQA, WebQuestions and CuratedTrec, reporting Exact Match (EM).",
+      "answer_keys": [
+        "exact match"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-15",
+      "question": "Why are the CuratedTrec and WebQuestions models initialized from the Natural Questions RAG model?",
+      "answer": "Because CT and WQ are small; this follows DPR.",
+      "answer_keys": [
+        "small"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-16",
+      "question": "Which dataset is used for abstractive question answering, and how is it made open-domain?",
+      "answer": "The MSMARCO NLG task v2.1; the supplied gold passages are not used, only the questions and answers.",
+      "answer_keys": [
+        "msmarco"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        4,
+        5
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-17",
+      "question": "Which splits and which metric are used for Jeopardy question generation?",
+      "answer": "The SearchQA splits (100K train, 14K dev, 27K test), evaluated with the SQuAD-tuned Q-BLEU-1 metric.",
+      "answer_keys": [
+        "searchqa",
+        "q-bleu"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        5
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-18",
+      "question": "What is Q-BLEU and why is it used for question generation?",
+      "answer": "A variant of BLEU with a higher weight for matching entities; it correlates better with human judgment for question generation than standard metrics.",
+      "answer_keys": [
+        "entities"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        5
+      ],
+      "type": "lexical",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-19",
+      "question": "How do the RAG authors define factuality and specificity in their human evaluation?",
+      "answer": "Factuality: whether a statement can be corroborated by trusted external sources. Specificity: high mutual dependence between the input and output.",
+      "answer_keys": [
+        "trusted external",
+        "mutual dependence"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        5
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-20",
+      "question": "Which two FEVER task variants does RAG evaluate, and what metric is reported?",
+      "answer": "The standard 3-way classification (supports/refutes/not enough info) and the 2-way (supports/refutes) task; label accuracy is reported. No supervision on retrieved evidence is used.",
+      "answer_keys": [
+        "3-way",
+        "2-way"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        5
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-21",
+      "question": "What Natural Questions test Exact Match do RAG-Token and RAG-Sequence get in Table 1?",
+      "answer": "RAG-Token 44.1 and RAG-Sequence 44.5.",
+      "answer_keys": [
+        "44.1",
+        "44.5"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-22",
+      "question": "What does the comparison with the DPR QA system show is unnecessary for state-of-the-art open-domain QA?",
+      "answer": "Neither a re-ranker (DPR uses a BERT-based cross-encoder to re-rank documents) nor an extractive reader is necessary.",
+      "answer_keys": [
+        "re-rank",
+        "extractive reader"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        5
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-23",
+      "question": "How often can RAG answer Natural Questions correctly when the correct answer is in none of the retrieved documents?",
+      "answer": "11.8% of such cases, where an extractive model would score 0%.",
+      "answer_keys": [
+        "11.8%"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-24",
+      "question": "By how much does RAG-Sequence beat BART on Open MS-MARCO NLG?",
+      "answer": "By 2.6 Bleu points and 2.6 Rouge-L points.",
+      "answer_keys": [
+        "2.6"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-25",
+      "question": "In the human factuality evaluation for Jeopardy question generation, how often was BART judged more factual, and how often RAG?",
+      "answer": "Over 452 pairs: BART more factual in 7.1% of cases, RAG more factual in 42.7%.",
+      "answer_keys": [
+        "7.1%",
+        "42.7%"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6,
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-26",
+      "question": "In the Hemingway Jeopardy example (Figure 2), what does the RAG-Token document posterior show?",
+      "answer": "The posterior is high for document 2 when generating 'The Sun Also Rises' and for document 1 when generating 'A Farewell to Arms'; after the first token of each title it flattens, suggesting BART's parametric knowledge completes the titles.",
+      "answer_keys": [
+        "sun also rises",
+        "farewell to arms"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6,
+        7
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-27",
+      "question": "How well do RAG's retrieved documents match FEVER's gold evidence articles?",
+      "answer": "The top retrieved document is from a gold article in 71% of cases, and a gold article is in the top 10 in 90% of cases.",
+      "answer_keys": [
+        "71%",
+        "90%"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        7
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-28",
+      "question": "Against which model is RAG compared for 2-way FEVER, and how close does it get?",
+      "answer": "Thorne and Vlachos, who train RoBERTa with the gold evidence sentence; RAG is within 2.7% despite retrieving its own evidence.",
+      "answer_keys": [
+        "roberta",
+        "2.7%"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        7
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-29",
+      "question": "When RAG's dense retriever is replaced by BM25, on which task does BM25 do best, and why?",
+      "answer": "FEVER, perhaps because FEVER claims are heavily entity-centric and so suit word-overlap retrieval. Differentiable retrieval is better on all other tasks, especially open-domain QA.",
+      "answer_keys": [
+        "fever",
+        "entity"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        7
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-30",
+      "question": "What ratio of distinct to total tri-grams does Table 5 report for BART and RAG-Sequence on Jeopardy question generation?",
+      "answer": "BART 32.4% and RAG-Sequence 53.8%.",
+      "answer_keys": [
+        "32.4",
+        "53.8"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        8
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-31",
+      "question": "How does retrieving more documents at test time affect Natural Questions performance for RAG-Sequence and RAG-Token?",
+      "answer": "It monotonically improves RAG-Sequence, while RAG-Token performance peaks at 10 retrieved documents.",
+      "answer_keys": [
+        "10",
+        "monoton"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        8
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-32",
+      "question": "How many retrieved documents are used at test time for open-domain QA with RAG-Token and with RAG-Sequence?",
+      "answer": "15 for RAG-Token and 50 for RAG-Sequence (with Thorough Decoding); greedy decoding is used for QA.",
+      "answer_keys": [
+        "15",
+        "50"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        17
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-33",
+      "question": "On what hardware and with which toolkit were the RAG models trained?",
+      "answer": "With Fairseq, using mixed precision, distributed across 8 32GB NVIDIA V100 GPUs.",
+      "answer_keys": [
+        "v100",
+        "fairseq"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        17
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-34",
+      "question": "How much CPU memory does RAG's Wikipedia document index require, and how much after compression?",
+      "answer": "About 100 GB of CPU memory, reduced to 36GB with FAISS's compression tools.",
+      "answer_keys": [
+        "100",
+        "36"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        17
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-35",
+      "question": "How many trainable parameters do the RAG models have in total?",
+      "answer": "626M: the BERT-base query and document encoders of DPR (110M each, though the document encoder is not trained) plus 406M from BART-large.",
+      "answer_keys": [
+        "626"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        18,
+        19
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-36",
+      "question": "How does T5-large compare with RAG-Sequence on Natural Questions?",
+      "answer": "T5-large (770M parameters) scores 28.9 EM, substantially below RAG-Sequence's 44.5.",
+      "answer_keys": [
+        "28.9",
+        "770"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        19
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-37",
+      "question": "What is retrieval collapse in RAG?",
+      "answer": "In tasks such as story generation, the retriever learned to retrieve the same documents regardless of input; the generator then learned to ignore them and RAG performed like BART.",
+      "answer_keys": [
+        "same documents",
+        "story generation"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        19
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-38",
+      "question": "What null document mechanism did the RAG authors try, and what happened?",
+      "answer": "Retrieving an extra empty 'null document' with a predicted logit (learned via a document embedding, a static bias, or a neural network) and marginalizing over k + 1 predictions. It did not improve performance, so it was omitted.",
+      "answer_keys": [
+        "null document"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        18
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-39",
+      "question": "How many values does RAG's non-parametric memory index hold, and at what precision can they be stored?",
+      "answer": "21M 728-dimensional vectors, 15.3B values, which can be stored at 8-bit floating point precision.",
+      "answer_keys": [
+        "15.3b",
+        "8-bit"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        19
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-40",
+      "question": "What are the train, development and test sizes of Natural Questions in Table 7?",
+      "answer": "79169 train, 8758 development and 3611 test.",
+      "answer_keys": [
+        "79169",
+        "3611"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        19
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-41",
+      "question": "How are TriviaQA answer candidates filtered for RAG training?",
+      "answer": "Answer candidates that do not occur in the top 1000 documents for the query are filtered out.",
+      "answer_keys": [
+        "1000"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        18
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-42",
+      "question": "How was annotator quality controlled in RAG's human evaluation?",
+      "answer": "Gold sentences were included to assess annotator accuracy; two annotators who did not perform well had their annotations removed.",
+      "answer_keys": [
+        "two annotators",
+        "gold"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        17
+      ],
+      "type": "factoid",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-43",
+      "question": "What Jeopardy Q-BLEU-1 scores do BART, RAG-Token and RAG-Sequence get in Table 2?",
+      "answer": "BART 19.7, RAG-Token 22.2, RAG-Sequence 21.4.",
+      "answer_keys": [
+        "19.7",
+        "22.2",
+        "21.4"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        6
+      ],
+      "type": "multi-part",
+      "answerable": true
+    },
+    {
+      "id": "v2-rag-44",
+      "question": "What potential misuses of RAG does the Broader Impact section mention?",
+      "answer": "Generating abuse or faked/misleading content in the news or on social media, impersonating others, and automating spam/phishing; it also notes advanced language models may automate jobs.",
+      "answer_keys": [
+        "phishing"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        10
+      ],
+      "type": "conceptual",
+      "answerable": true
+    },
+    {
+      "id": "v2-xdoc-01",
+      "question": "How does BERT-BASE's hidden size compare with the base Transformer's d_model from the original Transformer paper?",
+      "answer": "BERT-BASE uses H = 768; the base Transformer uses d_model = 512.",
+      "answer_keys": [
+        "768",
+        "512"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        3
+      ],
       "type": "cross-document",
       "answerable": true,
-      "notes": "Requires joining a citation in bert.pdf p3 to the architecture detail in attention.pdf p3. Scored as a hit if either document's page 3 is retrieved, but a fully correct answer needs both."
+      "extra_relevant": {
+        "attention": [
+          3,
+          5
+        ]
+      },
+      "notes": "Needs bert p3 and attention p3/p5."
     },
     {
-      "id": "unans-001",
-      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-Romanian translation task?",
+      "id": "v2-xdoc-02",
+      "question": "Which activation function does BERT use, and which one did the original Transformer's feed-forward network use?",
+      "answer": "BERT uses GELU; the original Transformer's position-wise feed-forward network uses ReLU.",
+      "answer_keys": [
+        "gelu",
+        "relu"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "attention": [
+          5
+        ]
+      }
+    },
+    {
+      "id": "v2-xdoc-03",
+      "question": "TriviaQA appears in both the BERT and RAG papers. How does each paper use it?",
+      "answer": "BERT fine-tunes on TriviaQA before SQuAD as data augmentation. RAG evaluates on TriviaQA as one of its open-domain QA datasets, and its DPR retriever was trained on TriviaQA questions.",
+      "answer_keys": [
+        "triviaqa",
+        "squad"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3,
+        4
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "bert": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "v2-xdoc-04",
+      "question": "What beam size did the Transformer use for translation, and what beam size did RAG use for Open-MSMarco and Jeopardy generation?",
+      "answer": "Both used a beam size of 4.",
+      "answer_keys": [
+        "4"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        8
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "rag": [
+          17
+        ]
+      }
+    },
+    {
+      "id": "v2-xdoc-05",
+      "question": "BERT describes the largest Transformer in Vaswani et al. as L=6, H=1024, A=16. How many parameters does the Transformer paper itself report for that big model?",
+      "answer": "213 million (Table 3 of the Transformer paper); BERT cites 100M for the encoder alone.",
+      "answer_keys": [
+        "213"
+      ],
+      "doc_id": "bert",
+      "relevant_pages": [
+        8
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "attention": [
+          9
+        ]
+      }
+    },
+    {
+      "id": "v2-xdoc-06",
+      "question": "Order these by parameter count: RAG's BART-large generator, BERT-LARGE, and the big Transformer.",
+      "answer": "BART-large (about 400M; 406M in the appendix) > BERT-LARGE (340M) > Transformer big (213M).",
+      "answer_keys": [
+        "340",
+        "213"
+      ],
+      "doc_id": "rag",
+      "relevant_pages": [
+        3,
+        18
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "bert": [
+          3
+        ],
+        "attention": [
+          9
+        ]
+      }
+    },
+    {
+      "id": "v2-xdoc-07",
+      "question": "How do the original Transformer and BERT differ in how they represent token positions?",
+      "answer": "The Transformer uses fixed sinusoidal positional encodings; BERT uses learned position embeddings (summed with token and segment embeddings, learned during pre-training).",
+      "answer_keys": [
+        "sinus",
+        "learn"
+      ],
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
+      "type": "cross-document",
+      "answerable": true,
+      "extra_relevant": {
+        "bert": [
+          4,
+          5,
+          13
+        ]
+      }
+    },
+    {
+      "id": "v2-unans-01",
+      "question": "What BLEU score did the big Transformer achieve on the WMT 2014 English-to-Spanish translation task?",
       "answer": "NOT_IN_CONTEXT",
-      "answer_keys": ["NOT_IN_CONTEXT"],
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-02",
+      "question": "How many attention heads does the BART-large generator used in RAG have?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
       "doc_id": null,
       "relevant_pages": [],
       "type": "unanswerable",
       "answerable": false,
-      "notes": "The paper reports English-to-German and English-to-French only. Phrased to look exactly like attn-002 so a pipeline that pattern-matches on 'BLEU score ... WMT 2014' will confidently fabricate a number."
+      "notes": "BART is only described as 400M/406M parameters; no head count anywhere in the corpus."
     },
     {
-      "id": "unans-002",
-      "question": "How many US dollars did it cost to pre-train BERT-LARGE?",
+      "id": "v2-unans-03",
+      "question": "What learning rate was used to fine-tune the RAG models?",
       "answer": "NOT_IN_CONTEXT",
-      "answer_keys": ["NOT_IN_CONTEXT"],
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-04",
+      "question": "What dropout rate was used when training RAG?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-05",
+      "question": "What dev-set perplexity did the base Transformer reach on English-to-French?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-06",
+      "question": "What F1 did BERT-LARGE achieve on CoNLL-2003 German named entity recognition?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-07",
+      "question": "How many hours did it take to train RAG on the 8 V100 GPUs?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
       "doc_id": null,
       "relevant_pages": [],
       "type": "unanswerable",
       "answerable": false,
-      "notes": "The paper reports TPU-days and references preemptible TPU pricing but never states a dollar cost. Nearby-but-absent facts are the realistic failure case."
+      "notes": "RAG reports hardware (8 V100s) but no training duration. Trap for pattern-matching onto the Transformer's 3.5 days or BERT's 4 days."
+    },
+    {
+      "id": "v2-unans-08",
+      "question": "What batch size was used to train the Transformer for English constituency parsing?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-09",
+      "question": "What Exact Match score did RAG achieve on SQuAD v1.1?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false
+    },
+    {
+      "id": "v2-unans-10",
+      "question": "What score did BERT-LARGE get on the SuperGLUE benchmark?",
+      "answer": "NOT_IN_CONTEXT",
+      "answer_keys": [
+        "NOT_IN_CONTEXT"
+      ],
+      "doc_id": null,
+      "relevant_pages": [],
+      "type": "unanswerable",
+      "answerable": false,
+      "notes": "SuperGLUE only appears in RAG's reference list."
     }
   ]
 }

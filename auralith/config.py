@@ -229,12 +229,21 @@ BASELINE_CONFIG = RetrievalConfig(
 # Phase C left everything off by default:
 #   hybrid BM25 - rejected, +0.0045 MRR (inside noise). results/sweep_hybrid.md
 #   reranking   - trade-off, not a win.                  results/sweep_rerank.md
+#
+# Phase F step 4 (results/comparison_ci.md, "Dense vs reranked retrieval"):
+#   reranking 20 -> 6, end to end on the 3B generator
+#     hand 19 -> 22-24/28, 3 answers fixed, 0 broken; hit@k 0.923 -> 0.885
+#     (bert-006, a wrong refusal in both runs), MRR 0.692 -> 0.705.
+#   Switched on: about the same as the 7B generator for one cross-encoder pass.
+#   Strict CI [0, +0.25] touches 0, so it is a default, not a claimed gain.
 PRODUCTION_CONFIG = RetrievalConfig(
     name="production",
     splitter="recursive",
     chunk_size=500,
     chunk_overlap=100,
     k=6,
-    notes="Phase B winner. See results/sweep_chunking.md and results/sweep_k.md.",
-    tags=("production", "phase-b"),
+    use_rerank=True,
+    rerank_fetch_k=20,
+    notes="Phase B chunking/k + Phase F rerank. See results/comparison_ci.md.",
+    tags=("production", "phase-b", "phase-f"),
 )

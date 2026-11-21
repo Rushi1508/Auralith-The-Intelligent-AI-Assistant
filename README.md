@@ -32,7 +32,7 @@ What made the difference:
 | Chunking 500 / 100 overlap | The original 7500-token "chunking" never split a single page. **Overlap mattered more than size.** |
 | k = 6 | hit@k and MRR stop improving at 6, and k=8 adds 33% more context for one question. |
 | Hybrid BM25: **rejected** | Dense retrieval already scored 1.00 on the keyword-heavy questions BM25 was meant to help. |
-| Reranking: **off** | A real trade-off: perfect ranking on conceptual questions, but lower recall. It needs an end-to-end run before it can be switched on. |
+| Reranking 20 → 6: **on** | Slightly lower recall (loses one page) but better ranking. End to end it fixed 3 answers and broke none (hand 19 → 22–24/28), matching the 7B generator. Switched on as the default; the interval touches zero, so the gain is not claimed as proven. |
 
 Retrieval is no longer the bottleneck. The right page now reaches the model for 24 of
 26 answerable questions, so the remaining errors come from the 3B local generator.
@@ -45,11 +45,14 @@ Answer correctness, all runs scored by the same fixed judge and also checked by 
 | tuned retrieval | 14/28 | 15/28 |
 | tuned + partial-answer prompt | 16/28 | 19/28 |
 | same, 7B generator (qwen2.5:7b) | **22/28** | **22/28** |
+| tuned + partial + reranking (3B) | 21/28 | **22–24/28** |
 
 Better retrieval did not measurably improve answers: tuned fixes 8 baseline errors but
-makes 6 new ones, all with the right page in context. The partial-answer prompt and the
-7B generator each help, mostly on multi-part answers, but every correctness interval
-still reaches zero on 28 questions, so no answer-quality gain is claimed. Details are in
+makes 6 new ones, all with the right page in context. The partial-answer prompt, the
+7B generator and reranking each help, mostly on multi-part answers. Reranking with
+the 3B model scores about the same as the 7B model, at much lower cost. But every
+correctness interval still reaches zero on 28 questions when borderline answers are
+failed, so no answer-quality gain is claimed. Details are in
 [`results/comparison_ci.md`](results/comparison_ci.md).
 
 Agent routing (llama3.2:3b, hand-labelled requests):

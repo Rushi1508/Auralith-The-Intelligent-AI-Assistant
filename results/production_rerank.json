@@ -1,0 +1,2736 @@
+{
+  "config": {
+    "name": "production_rerank",
+    "splitter": "recursive",
+    "chunk_size": 500,
+    "chunk_overlap": 100,
+    "k": 6,
+    "use_bm25": false,
+    "dense_weight": 0.5,
+    "use_rerank": true,
+    "rerank_fetch_k": 20,
+    "use_multiquery": false,
+    "multiquery_n": 3,
+    "notes": "Phase B winner. See results/sweep_chunking.md and results/sweep_k.md.",
+    "tags": [
+      "production",
+      "phase-b"
+    ],
+    "slug": "recursive_cs500_co100__k6__rr20",
+    "describe": "recursive 500/100, k=6, dense-only, rerank 20->6"
+  },
+  "settings": {
+    "provider": "ollama",
+    "generator_model": "llama3.2:3b",
+    "judge_model": "qwen2.5:7b",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "cross_encoder_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "temperature": 0.0
+  },
+  "run": {
+    "timestamp_utc": "2026-11-21T23:08:34.540340+00:00",
+    "generated_answers": true,
+    "judged": true,
+    "wall_seconds": 837.7,
+    "python": "3.14.3",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "index": {
+    "index_key": "recursive_cs500_co100",
+    "n_chunks": 132,
+    "build_seconds": 0.0,
+    "from_cache": true,
+    "stats": {}
+  },
+  "summary": {
+    "n_questions": 28,
+    "n_answerable": 26,
+    "n_unanswerable": 2,
+    "recall@6": 0.8654,
+    "hit@6": 0.8846,
+    "mrr": 0.7051,
+    "precision@6": 0.2692,
+    "answer_correctness": 0.75,
+    "answer_correctness_answerable": 0.7308,
+    "abstention_accuracy": 1.0,
+    "false_abstention_rate": 0.0769,
+    "keyword_score": 0.8929,
+    "mean_latency_s": 82.7481
+  },
+  "by_type": {
+    "conceptual": {
+      "n_questions": 5,
+      "n_answerable": 5,
+      "n_unanswerable": 0,
+      "recall@6": 0.9,
+      "hit@6": 1.0,
+      "mrr": 1.0,
+      "precision@6": 0.2333,
+      "answer_correctness": 0.8,
+      "answer_correctness_answerable": 0.8,
+      "false_abstention_rate": 0.0,
+      "keyword_score": 1.0,
+      "mean_latency_s": 85.918
+    },
+    "cross-document": {
+      "n_questions": 1,
+      "n_answerable": 1,
+      "n_unanswerable": 0,
+      "recall@6": 1.0,
+      "hit@6": 1.0,
+      "mrr": 0.5,
+      "precision@6": 0.5,
+      "answer_correctness": 0.0,
+      "answer_correctness_answerable": 0.0,
+      "false_abstention_rate": 0.0,
+      "keyword_score": 1.0,
+      "mean_latency_s": 81.008
+    },
+    "factoid": {
+      "n_questions": 16,
+      "n_answerable": 16,
+      "n_unanswerable": 0,
+      "recall@6": 0.8125,
+      "hit@6": 0.8125,
+      "mrr": 0.6146,
+      "precision@6": 0.2812,
+      "answer_correctness": 0.6875,
+      "answer_correctness_answerable": 0.6875,
+      "false_abstention_rate": 0.125,
+      "keyword_score": 0.8125,
+      "mean_latency_s": 81.7661
+    },
+    "lexical": {
+      "n_questions": 4,
+      "n_answerable": 4,
+      "n_unanswerable": 0,
+      "recall@6": 1.0,
+      "hit@6": 1.0,
+      "mrr": 0.75,
+      "precision@6": 0.2083,
+      "answer_correctness": 1.0,
+      "answer_correctness_answerable": 1.0,
+      "false_abstention_rate": 0.0,
+      "keyword_score": 1.0,
+      "mean_latency_s": 76.4625
+    },
+    "unanswerable": {
+      "n_questions": 2,
+      "n_answerable": 0,
+      "n_unanswerable": 2,
+      "recall@6": 0.0,
+      "hit@6": 0.0,
+      "mrr": 0.0,
+      "precision@6": 0.0,
+      "answer_correctness": 1.0,
+      "abstention_accuracy": 1.0,
+      "keyword_score": 1.0,
+      "mean_latency_s": 96.1215
+    }
+  },
+  "questions": [
+    {
+      "id": "attn-001",
+      "question": "How many identical layers are stacked in the Transformer encoder?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        3
+      ],
+      "answer": "[1]\n\nThe Transformer encoder is composed of a stack of N = 6 identical layers.",
+      "abstained": false,
+      "latency_seconds": 76.152,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 3,
+          "chunk_id": "0cb83c7db896c7bb"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "753f7bb7b2bcace7"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "b587b0438b127996"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "0bd43b505380c746"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-002",
+      "question": "What BLEU score did the big Transformer model achieve on the WMT 2014 English-to-German translation task?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        1,
+        8
+      ],
+      "answer": "[1], [2]\n\nThe big Transformer model achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation task.",
+      "abstained": false,
+      "latency_seconds": 85.659,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "5bca031e3a55505e"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 1,
+          "chunk_id": "742ae4bfb518b6b0"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "0bd43b505380c746"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "a80480ed98c0b6d4"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 1,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.5,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-003",
+      "question": "How many attention heads does the base Transformer use, and what are the key and value dimensions per head?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
+      "answer": "[1], [2]\n\nThe base Transformer uses 8 parallel attention layers, or heads. For each of these, we use dk = dv = dmodel/h = 64. Therefore, the number of attention heads is 8.\n\nThe key and value dimensions per head are both 64 (dk = dv = 64).",
+      "abstained": false,
+      "latency_seconds": 91.172,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "a80480ed98c0b6d4"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "79957aacf9f1a2cc"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "ddee098ebbb0806b"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 3,
+          "chunk_id": "0cb83c7db896c7bb"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 4,
+          "chunk_id": "5e8de1cd843c0552"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "753f7bb7b2bcace7"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-004",
+      "question": "What is the inner-layer dimensionality of the position-wise feed-forward network?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        5
+      ],
+      "answer": "[2]\n\nThe inner-layer dimensionality of the position-wise feed-forward network is 2048.",
+      "abstained": false,
+      "latency_seconds": 90.211,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "b587b0438b127996"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 3,
+          "chunk_id": "0cb83c7db896c7bb"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 7,
+          "chunk_id": "74f7386d2d530d75"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 4,
+          "chunk_id": "5e8de1cd843c0552"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 6,
+          "chunk_id": "5648a60a968aaac2"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 6,
+          "chunk_id": "79e9b28af9f90285"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 6,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 6,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-005",
+      "question": "Why does scaled dot-product attention divide the dot products by the square root of d_k?",
+      "type": "conceptual",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1], [2]\n\nThe scaled dot-product attention divides the dot products by \u221adk to counteract the effect of extremely small gradients. This is done to prevent the softmax function from pushing into regions where it has extremely small gradients, which can lead to unstable training. By scaling the dot products by 1\u221adk, the authors aim to mitigate this issue and improve the stability of the attention mechanism.",
+      "abstained": false,
+      "latency_seconds": 83.763,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 4,
+          "chunk_id": "1c9bfee1374c33b5"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 4,
+          "chunk_id": "5e8de1cd843c0552"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "ddee098ebbb0806b"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "b587b0438b127996"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "79957aacf9f1a2cc"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 1,
+          "chunk_id": "eccca8b3e6fa9cec"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 1,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-006",
+      "question": "What optimizer did the Transformer authors use, and what beta and epsilon values?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "answer": "NOT_IN_CONTEXT",
+      "abstained": true,
+      "latency_seconds": 77.991,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "df63a4918d0a35d4"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "a80480ed98c0b6d4"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "e5d34ec5f40eb829"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "0bd43b505380c746"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.0,
+      "hit": 0.0,
+      "reciprocal_rank": 0.0,
+      "precision": 0.0,
+      "judge_score": 0.0,
+      "judge_reason": "Abstained on an answerable question.",
+      "judge_parse_failed": false,
+      "keyword_score": 0.0
+    },
+    {
+      "id": "attn-007",
+      "question": "How many warmup steps were used in the Transformer learning rate schedule?",
+      "type": "lexical",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "answer": "[3]\n\nThe number of warmup steps used in the Transformer learning rate schedule is 4000.",
+      "abstained": false,
+      "latency_seconds": 90.291,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 7,
+          "chunk_id": "53b76c05af69d5fb"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "a80480ed98c0b6d4"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "5bca031e3a55505e"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 14,
+          "chunk_id": "10b6b176e4e94e71"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 1,
+          "chunk_id": "eccca8b3e6fa9cec"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 7,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 14,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 1,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "attn-008",
+      "question": "What hardware were the Transformer base models trained on, and for how long?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        7
+      ],
+      "answer": "[2] (source: attention, page 8)\n\nThe Transformer base model was trained on P100 GPUs. The training time is not specified in this passage.\n\nHowever, it is mentioned that a big model was trained on 8 P100 GPUs for 3.5 days. \n\nNOT_IN_CONTEXT",
+      "abstained": false,
+      "latency_seconds": 84.532,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 1,
+          "chunk_id": "eccca8b3e6fa9cec"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "5bca031e3a55505e"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "e5d34ec5f40eb829"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "0bd43b505380c746"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.0,
+      "hit": 0.0,
+      "reciprocal_rank": 0.0,
+      "precision": 0.0,
+      "judge_score": 0.0,
+      "judge_reason": "['The candidate answer does not mention the exact number of GPUs used (8) and the specific training duration (100,000 steps, about 12 hours) for the base models.']",
+      "judge_parse_failed": false,
+      "keyword_score": 0.5
+    },
+    {
+      "id": "attn-009",
+      "question": "According to the complexity table, what is the maximum path length of a self-attention layer compared to a recurrent layer?",
+      "type": "conceptual",
+      "answerable": true,
+      "doc_id": "attention",
+      "relevant_pages": [
+        6
+      ],
+      "answer": "[1]\n\nThe maximum path length of a self-attention layer is O(1), while that of a recurrent layer is O(n).",
+      "abstained": false,
+      "latency_seconds": 88.363,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 6,
+          "chunk_id": "79e9b28af9f90285"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 6,
+          "chunk_id": "5648a60a968aaac2"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 7,
+          "chunk_id": "74f7386d2d530d75"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "b587b0438b127996"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 5,
+          "chunk_id": "ddee098ebbb0806b"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 6,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 6,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 5,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-001",
+      "question": "What are the layer count, hidden size, attention heads, and total parameters of BERT-BASE and BERT-LARGE?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        3
+      ],
+      "answer": "[2] (source: bert, page 3)\nThe number of layers for BERT-BASE is L=12, \nthe hidden size is H=768, \nand the number of self-attention heads is A=12. \nTotal parameters are 110M.\n\n[2] (source: bert, page 3)\nThe number of layers for BERT-LARGE is L=24, \nthe hidden size is H=1024, \nand the number of self-attention heads is A=16. \nTotal parameters are 340M.",
+      "abstained": false,
+      "latency_seconds": 101.599,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 8,
+          "chunk_id": "61a94594c911894b"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "753f7bb7b2bcace7"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "22dc76e11d312dd4"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 18,
+          "chunk_id": "30b5e421ac99bd91"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 18,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": true
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-002",
+      "question": "What percentage of WordPiece tokens does BERT mask during masked language model pre-training?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1], [3]\n\nBERT masks 15% of all WordPiece tokens in each sequence at random during masked language model pre-training.",
+      "abstained": false,
+      "latency_seconds": 97.841,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "69af8602fc46417f"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "238d3cf6f00673b1"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "8205dd19c9d324ba"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "91a1b79b8dc8305c"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "bec456fb8590c745"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 13,
+          "chunk_id": "5075d11b1facf75b"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 13,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-003",
+      "question": "When BERT selects a token position for masking, how is it replaced?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[3] (source: bert, page 4)\nThe training data generator chooses 15% of the token positions at random for prediction. If the i-th token is chosen, we replace thei-th token with:\n\n1. The [MASK] token 80% of the time\n2. A random token 10% of the time\n3. The unchanged i-th token 10% of the time",
+      "abstained": false,
+      "latency_seconds": 45.486,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "69af8602fc46417f"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "238d3cf6f00673b1"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "8205dd19c9d324ba"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "df63a4918d0a35d4"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "eea614db1159feba"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "a8aa509834da5deb"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.5,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-004",
+      "question": "What tokenization scheme and vocabulary size does BERT use?",
+      "type": "lexical",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1], [5]\n\nBERT uses WordPiece embeddings with a 30,000 token vocabulary.",
+      "abstained": false,
+      "latency_seconds": 72.437,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "a8aa509834da5deb"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "22dc76e11d312dd4"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 14,
+          "chunk_id": "10b6b176e4e94e71"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "df63a4918d0a35d4"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "bec456fb8590c745"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "a4eea73f8f84c96d"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 14,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-005",
+      "question": "Which two unsupervised tasks is BERT pre-trained on?",
+      "type": "conceptual",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1] and [3]\n\nAccording to the passages, BERT is pre-trained using two unsupervised tasks:\n\n1. Masked Language Modeling (MLM): This task involves masking some percentage of the input tokens at random and predicting those masked tokens.\n2. Next Sentence Prediction (NSP): This task involves jointly pre-training text-pair representations by predicting whether a pair of sentences is coherent or not.",
+      "abstained": false,
+      "latency_seconds": 89.531,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "238d3cf6f00673b1"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 2,
+          "chunk_id": "d140cbb3a132547e"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "bec456fb8590c745"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 8,
+          "chunk_id": "f7a8bcb97bffbded"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 2,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 8,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 0.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-006",
+      "question": "What corpora were used to pre-train BERT, and how large were they?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        5
+      ],
+      "answer": "NOT_IN_CONTEXT",
+      "abstained": true,
+      "latency_seconds": 73.187,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "238d3cf6f00673b1"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 13,
+          "chunk_id": "f93cfe2f308ba550"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "a8aa509834da5deb"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "91a1b79b8dc8305c"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 13,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.0,
+      "hit": 0.0,
+      "reciprocal_rank": 0.0,
+      "precision": 0.0,
+      "judge_score": 0.0,
+      "judge_reason": "Abstained on an answerable question.",
+      "judge_parse_failed": false,
+      "keyword_score": 0.0
+    },
+    {
+      "id": "bert-007",
+      "question": "What GLUE score did BERT-LARGE obtain on the official leaderboard, and what did OpenAI GPT obtain?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        6
+      ],
+      "answer": "[1], [2]\n\nBERTLARGE obtained a score of 80.5 on the official GLUE leaderboard, while OpenAI GPT obtained a score of 72.8.",
+      "abstained": false,
+      "latency_seconds": 98.863,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 6,
+          "chunk_id": "21b895dfa6768007"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 6,
+          "chunk_id": "392de35ae2ea5a3b"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 7,
+          "chunk_id": "6e3d56fc4b3965dc"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 14,
+          "chunk_id": "10b6b176e4e94e71"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 6,
+          "chunk_id": "2db678ee85332981"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 7,
+          "chunk_id": "75d7b690f62d954c"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 6,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 6,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 14,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 6,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 7,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.5,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "bert-008",
+      "question": "What batch size and how many training steps were used for BERT pre-training, and how long did it take?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        13
+      ],
+      "answer": "[1], [4]\n\nThe batch size used for BERT pre-training was 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch). The number of training steps used for BERT pre-training was 1,000,000 steps. Each pre-training took 4 days to complete.\n\nNote that the question also asks how long it took, but the context passage does not provide a direct answer to this part of the question.",
+      "abstained": false,
+      "latency_seconds": 102.662,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 13,
+          "chunk_id": "f93cfe2f308ba550"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "91a1b79b8dc8305c"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 14,
+          "chunk_id": "10b6b176e4e94e71"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 13,
+          "chunk_id": "5075d11b1facf75b"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 13,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 14,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 13,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.3333333333333333,
+      "judge_score": 0.0,
+      "judge_reason": "['the candidate answer incorrectly states the batch size as 256 sequences * 512 tokens = 128,000 tokens/batch, while the reference specifies 256 sequences (128,000 tokens per batch)']",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-001",
+      "question": "What are the two RAG model formulations introduced in the paper, and how do they differ?",
+      "type": "conceptual",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        1,
+        3
+      ],
+      "answer": "[1][2]\nThe two RAG model formulations introduced in the paper are RAG-Sequence and RAG-Token. \n\nRAG-Sequence uses the same retrieved document to generate the complete sequence, treating the retrieved document as a single latent variable that is marginalized to get the seq2seq probability p(y|x). \n\nIn contrast, RAG-Token can predict each target token based on a different document, allowing the generator to choose content from several documents when producing an answer.",
+      "abstained": false,
+      "latency_seconds": 81.424,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "8103347bb6bfbde8"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 5,
+          "chunk_id": "e03b39677b1edfcf"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 2,
+          "chunk_id": "b5c94a4d2bc0f6b2"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 6,
+          "chunk_id": "dbb40b56bcf088d7"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 6,
+          "chunk_id": "30cfd2afcffc08da"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 2,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 6,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 6,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.5,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-002",
+      "question": "Which retriever and which generator does RAG use?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        2,
+        3
+      ],
+      "answer": "[2] [6]\n\nRAG uses the Dense Passage Retriever (DPR) as its retriever component, p\u03b7(z|x).\n\nRAG uses BART-large as its generator component, p\u03b8(yi|x,z,y 1:i\u22121).",
+      "abstained": false,
+      "latency_seconds": 57.408,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "8103347bb6bfbde8"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 5,
+          "chunk_id": "e03b39677b1edfcf"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 2,
+          "chunk_id": "b5c94a4d2bc0f6b2"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "f8300d15a72fc3b2"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 2,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.6666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-003",
+      "question": "How many parameters does the BART-large generator used in RAG have?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        3
+      ],
+      "answer": "[2] (source: rag, page 3)\nThe BART-large generator used in RAG has 400M parameters.\n\n[6] (source: rag, page 3)\nThis is stated as \"BART was pre-trained using a denoising objective and a variety of different noising functions. It has obtained state-of-the-art results on a diverse set of generation tasks and outperforms comparably-sized T5 models [32]. We refer to the BART generator parameters\u03b8 as the parametric memory henceforth.\"\n\nNote that this answer is supported by both passages, but only passage [6] explicitly states the number of parameters.",
+      "abstained": false,
+      "latency_seconds": 80.55,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 18,
+          "chunk_id": "30b5e421ac99bd91"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "f8300d15a72fc3b2"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 19,
+          "chunk_id": "9a9781515556033c"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "2f8e3b68d236abce"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 17,
+          "chunk_id": "fdb9d2a39b5bb6da"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 18,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 19,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 17,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": true
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-004",
+      "question": "Which Wikipedia dump does RAG index, how is it chunked, and how many documents result?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[2][3]\n\nAccording to passage [2], the Wikipedia dump used by RAG for non-parametric knowledge source is from December 2018, which is split into disjoint 100-word chunks, resulting in a total of 21M documents.\n\nNOT_IN_CONTEXT",
+      "abstained": false,
+      "latency_seconds": 72.95,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 8,
+          "chunk_id": "461f33d858e7de41"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "7c1131d72a31b5d3"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 17,
+          "chunk_id": "fdb9d2a39b5bb6da"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 17,
+          "chunk_id": "06d80d51ab1b15fe"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 17,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 17,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-005",
+      "question": "What library and approximation does RAG use to build its MIPS index?",
+      "type": "lexical",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1][2]\n\nRAG uses FAISS [23] with a Hierarchical Navigable Small World (HNSW) approximation to build its Maximum Inner Product Search (MIPS) index.",
+      "abstained": false,
+      "latency_seconds": 78.129,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "7c1131d72a31b5d3"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 8,
+          "chunk_id": "461f33d858e7de41"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 2,
+          "chunk_id": "b5c94a4d2bc0f6b2"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 17,
+          "chunk_id": "fdb9d2a39b5bb6da"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 2,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 17,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-006",
+      "question": "During RAG training, which components are fine-tuned and which are held fixed?",
+      "type": "conceptual",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[1], [3]\n\nAccording to passage [1], the document encoder BERTd is kept fixed during training, only fine-tuning the query encoder BERTq and the BART generator.\n\nAdditionally, passage [3] mentions that the retriever (based on DPR) was initialized with a pre-trained bi-encoder from DPR but does not indicate that it is fine-tuned during RAG training.",
+      "abstained": false,
+      "latency_seconds": 86.509,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "2f8e3b68d236abce"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "69af8602fc46417f"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 8,
+          "chunk_id": "461f33d858e7de41"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 6,
+          "chunk_id": "21b895dfa6768007"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 6,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.16666666666666666,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-007",
+      "question": "What are the two decoding procedures RAG-Sequence uses called?",
+      "type": "lexical",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        4
+      ],
+      "answer": "[4]\n\nRAG-Sequence uses two decoding procedures:\n\n1. \"Thorough Decoding\"\n2. \"Fast Decoding\"",
+      "abstained": false,
+      "latency_seconds": 64.993,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "8103347bb6bfbde8"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "7c1131d72a31b5d3"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 17,
+          "chunk_id": "fdb9d2a39b5bb6da"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 4,
+          "chunk_id": "2f8e3b68d236abce"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 3,
+          "chunk_id": "b7af37c0e707ba50"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 17,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 4,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 3,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.3333333333333333,
+      "judge_score": 1.0,
+      "judge_reason": "",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "rag-008",
+      "question": "In the index hot-swapping experiment, how accurately did RAG answer questions about world leaders when the index year matched the question year, and when it did not?",
+      "type": "factoid",
+      "answerable": true,
+      "doc_id": "rag",
+      "relevant_pages": [
+        8
+      ],
+      "answer": "[2][3]\n\nAccording to Table 6, when the index year matches the question year, RAG answers 70% correctly. However, when the index year does not match the question year, accuracy is low (12% with the 2018 index and 2016 leaders, 4% with the 2016 index and 2018 leaders).\n\nNOT_IN_CONTEXT",
+      "abstained": false,
+      "latency_seconds": 71.994,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "rag",
+          "page": 8,
+          "chunk_id": "461f33d858e7de41"
+        },
+        {
+          "n": 2,
+          "doc_id": "rag",
+          "page": 7,
+          "chunk_id": "98b01d7c2cdcc3ce"
+        },
+        {
+          "n": 3,
+          "doc_id": "rag",
+          "page": 8,
+          "chunk_id": "fe326ea964fc07c9"
+        },
+        {
+          "n": 4,
+          "doc_id": "rag",
+          "page": 5,
+          "chunk_id": "e03b39677b1edfcf"
+        },
+        {
+          "n": 5,
+          "doc_id": "rag",
+          "page": 6,
+          "chunk_id": "dbb40b56bcf088d7"
+        },
+        {
+          "n": 6,
+          "doc_id": "rag",
+          "page": 5,
+          "chunk_id": "e88aab49e2fd3cf8"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "rag",
+          "page": 8,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 7,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 8,
+          "relevant": true
+        },
+        {
+          "doc_id": "rag",
+          "page": 5,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 6,
+          "relevant": false
+        },
+        {
+          "doc_id": "rag",
+          "page": 5,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 1.0,
+      "precision": 0.3333333333333333,
+      "judge_score": 0.0,
+      "judge_reason": "['Table 6 is not mentioned in the reference answer.']",
+      "judge_parse_failed": false,
+      "keyword_score": 0.5
+    },
+    {
+      "id": "xdoc-001",
+      "question": "BERT's architecture is based on the Transformer encoder from an earlier paper. Which paper is that, and how many layers did that paper's base encoder stack use?",
+      "type": "cross-document",
+      "answerable": true,
+      "doc_id": "bert",
+      "relevant_pages": [
+        3
+      ],
+      "answer": "[3] (source: attention, page 3)\n\nThe Transformer encoder used in BERT's architecture is based on a stacked self-attention mechanism with two sub-layers: a multi-head self-attention mechanism and a simple, position-wise fully connected feed-forward network. The base encoder stack used in the original paper by Vaswani et al. (2017) had 6 identical layers.\n\n[2] (source: bert, page 3)\n\nThe number of layers in BERT's base model is denoted as L=12.",
+      "abstained": false,
+      "latency_seconds": 81.008,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "df63a4918d0a35d4"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "753f7bb7b2bcace7"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 3,
+          "chunk_id": "0cb83c7db896c7bb"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 2,
+          "chunk_id": "d140cbb3a132547e"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "attention",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": true
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 2,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 1.0,
+      "hit": 1.0,
+      "reciprocal_rank": 0.5,
+      "precision": 0.5,
+      "judge_score": 0.0,
+      "judge_reason": "['The candidate answer incorrectly states that the base encoder stack had two sub-layers: a multi-head self-attention mechanism and a simple, position-wise fully connected feed-forward network.', \"The number of layers in BERT's base model (L=12) is not mentioned in the reference answer and does not ",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "unans-001",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-Romanian translation task?",
+      "type": "unanswerable",
+      "answerable": false,
+      "doc_id": null,
+      "relevant_pages": [],
+      "answer": "NOT_IN_CONTEXT",
+      "abstained": true,
+      "latency_seconds": 102.737,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "5bca031e3a55505e"
+        },
+        {
+          "n": 2,
+          "doc_id": "attention",
+          "page": 8,
+          "chunk_id": "bcf0daf6ebb79e9c"
+        },
+        {
+          "n": 3,
+          "doc_id": "attention",
+          "page": 1,
+          "chunk_id": "742ae4bfb518b6b0"
+        },
+        {
+          "n": 4,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "f7a8214aab1d8a3c"
+        },
+        {
+          "n": 5,
+          "doc_id": "attention",
+          "page": 10,
+          "chunk_id": "0bd43b505380c746"
+        },
+        {
+          "n": 6,
+          "doc_id": "attention",
+          "page": 9,
+          "chunk_id": "a80480ed98c0b6d4"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 8,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 10,
+          "relevant": false
+        },
+        {
+          "doc_id": "attention",
+          "page": 9,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.0,
+      "hit": 0.0,
+      "reciprocal_rank": 0.0,
+      "precision": 0.0,
+      "judge_score": 1.0,
+      "judge_reason": "Correctly abstained.",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    },
+    {
+      "id": "unans-002",
+      "question": "How many US dollars did it cost to pre-train BERT-LARGE?",
+      "type": "unanswerable",
+      "answerable": false,
+      "doc_id": null,
+      "relevant_pages": [],
+      "answer": "NOT_IN_CONTEXT",
+      "abstained": true,
+      "latency_seconds": 89.506,
+      "error": null,
+      "citations": [
+        {
+          "n": 1,
+          "doc_id": "bert",
+          "page": 13,
+          "chunk_id": "f93cfe2f308ba550"
+        },
+        {
+          "n": 2,
+          "doc_id": "bert",
+          "page": 16,
+          "chunk_id": "91a1b79b8dc8305c"
+        },
+        {
+          "n": 3,
+          "doc_id": "bert",
+          "page": 4,
+          "chunk_id": "238d3cf6f00673b1"
+        },
+        {
+          "n": 4,
+          "doc_id": "bert",
+          "page": 9,
+          "chunk_id": "2574f6ed0da2a396"
+        },
+        {
+          "n": 5,
+          "doc_id": "bert",
+          "page": 1,
+          "chunk_id": "bec456fb8590c745"
+        },
+        {
+          "n": 6,
+          "doc_id": "bert",
+          "page": 3,
+          "chunk_id": "8389cfcb40d2c524"
+        }
+      ],
+      "retrieved": [
+        {
+          "doc_id": "bert",
+          "page": 13,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 16,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 4,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 9,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 1,
+          "relevant": false
+        },
+        {
+          "doc_id": "bert",
+          "page": 3,
+          "relevant": false
+        }
+      ],
+      "n_retrieved": 6,
+      "recall": 0.0,
+      "hit": 0.0,
+      "reciprocal_rank": 0.0,
+      "precision": 0.0,
+      "judge_score": 1.0,
+      "judge_reason": "Correctly abstained.",
+      "judge_parse_failed": false,
+      "keyword_score": 1.0
+    }
+  ]
+}

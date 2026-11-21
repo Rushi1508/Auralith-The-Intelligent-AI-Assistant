@@ -124,3 +124,46 @@ attn-006 and bert-006, gets attn-008 wrong (it gives the big model's 3.5 days as
 the base model's training time), and on xdoc-001 it does not name the paper.
 Borderline passes: attn-005 leaves out the softmax-gradient reason, and rag-001
 expands RAG as "Research Augmented Generation".
+
+## Dense vs reranked retrieval (3B generator)
+
+`python eval/compare.py results/production_partial.json results/production_rerank.json`
+
+Same generator (llama3.2:3b), prompt and judge. The only change is a
+cross-encoder (`ms-marco-MiniLM-L-6-v2`) that reranks the top 20 dense hits down to 6.
+
+| metric | n | production_partial | production_rerank | delta | 95% CI (paired bootstrap) | |
+|---|---|---|---|---|---|---|
+| recall@k | 26 | 0.8846 | 0.8654 | -0.0192 | [-0.1154, +0.0577] | includes 0 |
+| hit@k | 26 | 0.9231 | 0.8846 | -0.0385 | [-0.1154, +0.0000] | includes 0 |
+| MRR | 26 | 0.6917 | 0.7051 | +0.0135 | [-0.1269, +0.1558] | includes 0 |
+| answer_correctness (all) | 28 | 0.5714 | 0.7500 | +0.1786 | [+0.0357, +0.3214] | excludes 0 |
+| false_abstention_rate (answerable) | 26 | 0.0769 | 0.0769 | +0.0000 | [-0.1154, +0.1154] | includes 0 |
+| keyword_score | 28 | 0.7143 | 0.8929 | +0.1786 | [+0.0536, +0.3214] | excludes 0 |
+
+The judge's +5 is mostly the judge being too strict on the dense run.
+It flips five questions from wrong to right and none the other way, but by hand
+attn-003, bert-002 and rag-001 were already right in production_partial. Every
+rerank answer was read by hand, using the same standard as `eval/judge_labels.json`:
+
+| comparison | hand | hand delta | 95% CI | |
+|---|---|---|---|---|
+| partial → rerank, borderline answers failed | 19 → 22 | +3/28 | [+0.000, +0.250] | touches 0 |
+| partial → rerank, borderline answers passed | 19 → 24 | +5/28 | [+0.036, +0.321] | excludes 0 |
+
+Real wins by hand: bert-003 (gets [MASK] 80% right, where the dense run said
+"the actual word"), bert-005 (now names MLM and NSP) and rag-005 (FAISS with
+HNSW). Borderline: bert-008 gives batch size, steps and 4 days, then says the
+duration is not in the context. xdoc-001 names "Vaswani et al. (2017)" and 6
+layers but not the paper's title. The judge failed bert-005, bert-008 and
+xdoc-001, so judge 21 vs hand 22-24.
+
+The one retrieval loss (bert-006 loses its relevant page) costs nothing,
+because that question was a wrong refusal in both runs. No answer got worse.
+
+On this set, reranking with the 3B generator scores about the same as the 7B
+generator (22/28 by hand). It costs a cross-encoder pass rather than a model
+more than twice the size. The gain is not established: the strict interval
+touches 0, and with one run per config, generation variance from the changed
+passage order cannot be separated from the reranking effect (METHODOLOGY
+limitation 5).

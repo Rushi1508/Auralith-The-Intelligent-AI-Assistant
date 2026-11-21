@@ -435,11 +435,9 @@ def main() -> int:
 
     named = {
         "baseline": BASELINE_CONFIG,
-        "production": PRODUCTION_CONFIG,
-        # Phase F step 4: best MRR in results/sweep_rerank.md, now scored end to end.
-        "production_rerank": PRODUCTION_CONFIG.with_(
-            name="production_rerank", use_rerank=True, rerank_fetch_k=20
-        ),
+        # Dense-only, as in results/production*.json before rerank became the default.
+        "production": PRODUCTION_CONFIG.with_(use_rerank=False),
+        "production_rerank": PRODUCTION_CONFIG.with_(name="production_rerank"),
     }
     if args.config not in named:
         raise SystemExit(
