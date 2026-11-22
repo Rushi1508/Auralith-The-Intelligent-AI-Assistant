@@ -406,7 +406,7 @@ def main() -> int:
     logging.getLogger("eval").setLevel(logging.INFO)
 
     settings = Settings.from_env()
-    check_backend(settings)
+    check_backend(settings, need_judge=True)
 
     if args.validate_judge:
         judge = get_judge_model(settings)

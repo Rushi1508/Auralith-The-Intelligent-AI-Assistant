@@ -44,7 +44,8 @@ def landing_page() -> None:
 
     settings = Settings.from_env()
     st.caption(
-        f"Provider: `{settings.provider}` · generator `{settings.generator_model}` · "
+        f"Provider: `{settings.provider}` · generator "
+        f"`{settings.generator_model}` ({settings.generator_provider}) · "
         f"embeddings `{settings.embedding_model}`"
     )
 

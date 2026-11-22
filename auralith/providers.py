@@ -182,7 +182,7 @@ def unload_model(settings: Settings, model: str) -> bool:
         return False
 
 
-def check_backend(settings: Settings) -> None:
+def check_backend(settings: Settings, need_judge: bool = False) -> None:
     """Fail fast with an actionable message if the backend is unreachable.
 
     The original prototype's failure mode for a missing key was a raw traceback
@@ -192,6 +192,17 @@ def check_backend(settings: Settings) -> None:
         if not settings.openai_api_key:
             raise ProviderError("OPENAI_API_KEY is not set.")
         return
+
+    # Hosted generator: the app needs no Ollama at all (embeddings and reranker
+    # are local Python). Only the eval judge still lives on Ollama.
+    if settings.generator_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ProviderError(
+                "AURALITH_GENERATOR_PROVIDER=gemini but GEMINI_API_KEY is not set. "
+                "Get a free key at aistudio.google.com and put it in .env."
+            )
+        if not need_judge:
+            return
 
     import urllib.error
     import urllib.request

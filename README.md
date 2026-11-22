@@ -119,6 +119,18 @@ streamlit run main.py
 
 Set `AURALITH_PROVIDER=openai` and `OPENAI_API_KEY` to use hosted models instead.
 
+**No GPU or no Ollama?** Use a free Gemini key (aistudio.google.com) for the generator. Embeddings and the
+reranker still run locally, so no Ollama is needed. In `.env`:
+
+```
+AURALITH_GENERATOR_PROVIDER=gemini
+GEMINI_API_KEY=<your key>
+```
+
+The default model is `gemini-3.5-flash-lite`; override it with `AURALITH_GENERATOR_MODEL`. Free-tier
+content may be used by Google to improve its products, so don't send confidential documents. The image
+mode still uses Ollama. The router prompts were tuned on llama3.2:3b and have not been re-measured with Gemini.
+
 To reproduce the evaluation:
 
 ```bash

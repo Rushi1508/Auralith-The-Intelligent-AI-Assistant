@@ -301,7 +301,7 @@ def main() -> int:
     )
 
     settings = Settings.from_env()
-    check_backend(settings)
+    check_backend(settings, need_judge=True)
     questions = load_questions()
 
     base = None

@@ -69,7 +69,12 @@ class Settings:
     def from_env(cls) -> "Settings":
         return cls(
             provider=os.getenv("AURALITH_PROVIDER", "ollama"),  # type: ignore[arg-type]
-            generator_model=os.getenv("AURALITH_GENERATOR_MODEL", "llama3.2:3b"),
+            generator_model=os.getenv(
+                "AURALITH_GENERATOR_MODEL",
+                "gemini-3.5-flash-lite"
+                if os.getenv("AURALITH_GENERATOR_PROVIDER") == "gemini"
+                else "llama3.2:3b",
+            ),
             judge_model=os.getenv("AURALITH_JUDGE_MODEL", "qwen2.5:7b"),
             embedding_model=os.getenv(
                 "AURALITH_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
