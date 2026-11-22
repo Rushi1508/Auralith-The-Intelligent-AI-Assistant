@@ -76,6 +76,23 @@ def get_chat_model(settings: Settings, model: str | None = None) -> BaseChatMode
     """Return a chat model. `model` overrides the configured generator."""
     name = model or settings.generator_model
 
+    # Only the default (generator) call goes hosted; explicit `model=` callers
+    # (the judge, the router eval) stay on Ollama.
+    if model is None and settings.generator_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ProviderError("AURALITH_GENERATOR_PROVIDER=gemini but GEMINI_API_KEY is not set.")
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=name,
+            temperature=settings.temperature,
+            api_key=settings.gemini_api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            timeout=settings.request_timeout,
+            max_tokens=settings.max_output_tokens,
+            max_retries=6,  # free tier 429s; SDK backs off
+        )
+
     if settings.provider == "openai":
         if not settings.openai_api_key:
             raise ProviderError(
@@ -192,7 +209,10 @@ def check_backend(settings: Settings) -> None:
             f"running? Original error: {exc}"
         ) from exc
 
-    missing = {settings.generator_model, settings.judge_model} - names
+    needed = {settings.judge_model}
+    if settings.generator_provider == "ollama":
+        needed.add(settings.generator_model)
+    missing = needed - names
     if missing:
         raise ProviderError(
             f"Ollama is running but these models are not pulled: {sorted(missing)}. "

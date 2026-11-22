@@ -47,6 +47,10 @@ class Settings:
     cross_encoder_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     ollama_base_url: str = "http://localhost:11434"
     openai_api_key: str | None = None
+    # Hosted *generator only* (Gemini's OpenAI-compatible endpoint). The judge,
+    # embeddings and cross-encoder stay local so v2 numbers remain comparable.
+    generator_provider: Literal["ollama", "gemini"] = "ollama"
+    gemini_api_key: str | None = None
     # Judge and router both need determinism for a reproducible eval.
     temperature: float = 0.0
     request_timeout: int = 120
@@ -75,6 +79,8 @@ class Settings:
             ),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
+            generator_provider=os.getenv("AURALITH_GENERATOR_PROVIDER", "ollama"),  # type: ignore[arg-type]
+            gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
             temperature=float(os.getenv("AURALITH_TEMPERATURE", "0.0")),
             request_timeout=int(os.getenv("AURALITH_TIMEOUT", "120")),
             max_output_tokens=int(os.getenv("AURALITH_MAX_OUTPUT_TOKENS", "512")),
@@ -113,6 +119,11 @@ class RetrievalConfig:
     # --- query expansion (Phase C) --------------------------------------
     use_multiquery: bool = False
     multiquery_n: int = 3
+
+    # --- query decomposition (Phase F) ----------------------------------
+    use_decompose: bool = False
+    decompose_max: int = 3
+    """Max sub-questions. Each is retrieved + reranked on its own, then merged."""
 
     notes: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
@@ -159,6 +170,8 @@ class RetrievalConfig:
             parts.append(f"rr{self.rerank_fetch_k}")
         if self.use_multiquery:
             parts.append(f"mq{self.multiquery_n}")
+        if self.use_decompose:
+            parts.append(f"dec{self.decompose_max}")
         return "__".join(parts)
 
     @property
@@ -180,6 +193,8 @@ class RetrievalConfig:
             bits.append(f"rerank {self.rerank_fetch_k}->{self.k}")
         if self.use_multiquery:
             bits.append(f"multiquery x{self.multiquery_n}")
+        if self.use_decompose:
+            bits.append(f"decompose <={self.decompose_max}")
         return ", ".join(bits)
 
 

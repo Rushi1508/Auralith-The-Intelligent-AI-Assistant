@@ -62,7 +62,7 @@ pytest==9.1.1
 
 # --- Optional ---------------------------------------------------------------
 # Hosted provider (only needed when AURALITH_PROVIDER=openai):
-#   langchain-openai>=1.0
+#   langchain-openai>=1.0   (also needed for AURALITH_GENERATOR_PROVIDER=gemini)
 # Better web search (only needed when AURALITH_SEARCH_BACKEND=tavily):
 #   tavily-python>=0.5
 # Voice input in Chat mode. PyAudio needs a system-level PortAudio install and

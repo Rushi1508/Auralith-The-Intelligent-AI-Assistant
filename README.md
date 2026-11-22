@@ -4,12 +4,14 @@
 
 Ask questions about a PDF and get answers that cite their source passages. General
 questions go through a LangGraph agent that picks between web search, code
-generation, or conversation. It runs fully locally: no API key needed.
+generation, or conversation. It runs fully locally by default: no API key needed. A free Gemini key can optionally replace the local generator.
 
 ## Highlights
 
 - **Retrieval recall up from 0.62 to 0.88.** Retrieval misses fell 78% (9/26 → 2/26) after systematic sweeps of chunking, k, hybrid search and reranking.
 - **Wrongly refused answers down from 5/26 to 2/26** after a prompt change that lets the model give partial answers.
+- **Reranking is now proven on 142 questions:** answer correctness 0.465 → 0.549 (95% CI [+0.02, +0.15]), false abstentions 14% → 6%. The earlier 28-question run could not show this.
+- **The generator matters more than retrieval tweaks.** Swapping the local 3B for Gemini flash-lite on identical retrieval: 0.549 → 0.739 (CI [+0.12, +0.26]). Query decomposition added +0.04 on a held-out split, not distinguishable from noise.
 - **The LLM-as-judge is checked against hand labels.** The first judge agreed with a human only 15/24 times; the rewritten one agrees 21/24 (87.5%). Re-scoring older runs with it showed that the earlier answer-quality gain was an artefact of the first judge.
 - **Agent router errors cut from 9 to 2 across 84 requests** by a prompt fix for a bias towards web search, checked on a held-out set written before the fix (20/24 → 24/24).
 - **Negative results are reported too.** Hybrid BM25 search was hypothesised, tested and rejected (+0.0045 MRR, which is noise).
@@ -32,7 +34,7 @@ What made the difference:
 | Chunking 500 / 100 overlap | The original 7500-token "chunking" never split a single page. **Overlap mattered more than size.** |
 | k = 6 | hit@k and MRR stop improving at 6, and k=8 adds 33% more context for one question. |
 | Hybrid BM25: **rejected** | Dense retrieval already scored 1.00 on the keyword-heavy questions BM25 was meant to help. |
-| Reranking 20 → 6: **on** | Slightly lower recall (loses one page) but better ranking. End to end it fixed 3 answers and broke none (hand 19 → 22–24/28), matching the 7B generator. Switched on as the default; the interval touches zero, so the gain is not claimed as proven. |
+| Reranking 20 → 6: **on** | Slightly lower recall (loses one page) but better ranking. End to end it fixed 3 answers and broke none (hand 19 → 22–24/28), matching the 7B generator. Switched on as the default. On the 142-question v2 set the gain is proven (see below). |
 
 Retrieval is no longer the bottleneck. The right page now reaches the model for 24 of
 26 answerable questions, so the remaining errors come from the 3B local generator.
@@ -53,6 +55,21 @@ makes 6 new ones, all with the right page in context. The partial-answer prompt,
 the 3B model scores about the same as the 7B model, at much lower cost. But every
 correctness interval still reaches zero on 28 questions when borderline answers are
 failed, so no answer-quality gain is claimed. Details are in
+[`results/comparison_ci.md`](results/comparison_ci.md).
+
+### v2: 142 questions (supersedes the 28-question numbers above)
+
+| run | answer correctness | 95% CI of delta |
+|---|---|---|
+| dense, 3B generator | 0.465 | n/a |
+| + rerank 20 → 6 (default), 3B | 0.549 | [+0.02, +0.15] vs dense, **excludes 0** |
+| same retrieval, Gemini flash-lite generator | **0.739** | [+0.12, +0.26] vs 3B, **excludes 0** |
+
+Hit@6 rose 0.864 → 0.924 and MRR 0.641 → 0.772 with rerank. By type, cross-document
+questions remain the weakest (0.29 with Gemini, n=7). Query decomposition
+(`production_decompose`) gave +0.04 on a held-out split, interval [-0.01, +0.10], at twice
+the latency, so it is off by default. The Gemini runs use the hosted model for generation
+only; the judge, embeddings and reranker stay local. Full tables:
 [`results/comparison_ci.md`](results/comparison_ci.md).
 
 Agent routing (llama3.2:3b, hand-labelled requests):
@@ -114,10 +131,11 @@ Tests: `pytest -m "not slow"`. The suite covers the metrics, chunking, retrieval
 
 ## Limits
 
-This is a local project, not a deployed product. The evaluation uses 28 questions on
-3 NLP papers, so differences under about 0.04 recall are noise. Settings were tuned
-one at a time rather than over a full grid, and answer quality is limited by a 3B CPU
-model.
+This is a local project, not a deployed product. The evaluation uses 142 questions on
+3 NLP papers (the original 28 are superseded); small subgroups such as cross-document (n=7) are
+too small to conclude from, and the judge is a local 7B model checked against only 24 hand labels. Settings were tuned
+one at a time rather than over a full grid, and answer quality with the default 3B CPU
+model is limited (0.55 vs 0.74 with a hosted model).
 
 ---
 

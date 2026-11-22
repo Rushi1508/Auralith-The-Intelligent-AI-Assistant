@@ -311,6 +311,7 @@ def run_config(
         "config": {**asdict(config), "slug": config.slug, "describe": config.describe()},
         "settings": {
             "provider": settings.provider,
+            "generator_provider": settings.generator_provider,
             "generator_model": settings.generator_model if generate else None,
             "judge_model": settings.judge_model if (generate and judge_answers) else None,
             "embedding_model": settings.embedding_model,
@@ -389,6 +390,11 @@ def main() -> int:
         action="store_true",
         help="Score the judge against hand labels and exit",
     )
+    ap.add_argument(
+        "--split", choices=["all", "dev", "test"], default="all",
+        help="dev = tuning questions in eval/dev_split.json; test = the rest",
+    )
+    ap.add_argument("--limit", type=int, default=None, help="Run only the first N questions (smoke test)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -438,6 +444,9 @@ def main() -> int:
         # Dense-only, as in results/production*.json before rerank became the default.
         "production": PRODUCTION_CONFIG.with_(use_rerank=False),
         "production_rerank": PRODUCTION_CONFIG.with_(name="production_rerank"),
+        "production_decompose": PRODUCTION_CONFIG.with_(
+            name="production_decompose", use_decompose=True
+        ),
     }
     if args.config not in named:
         raise SystemExit(
@@ -447,6 +456,10 @@ def main() -> int:
     config = named[args.config]
 
     questions = load_questions()
+    if args.split != "all":
+        dev = set(json.loads((QUESTIONS_PATH.parent / "dev_split.json").read_text())["ids"])
+        questions = [q for q in questions if (q["id"] in dev) == (args.split == "dev")]
+    questions = questions[: args.limit]
     print(f"Config:    {config.name} - {config.describe()}")
     print(f"Questions: {len(questions)}")
     print(f"Provider:  {settings.provider} ({settings.generator_model})\n")
