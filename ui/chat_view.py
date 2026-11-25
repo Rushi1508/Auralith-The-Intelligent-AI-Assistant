@@ -1,8 +1,8 @@
-"""Chat view, backed by the LangGraph agent.
+"""Chat view, an HTTP client of the API's LangGraph agent (`/chat`).
 
 The inherited chat_module held routing, prompting, voice capture, file writing
 and Streamlit widgets in one 128-line function. This view does presentation
-only: it collects a query, calls `run_graph`, and renders the result. The
+only: it collects a query, calls the API, and renders the result. The
 routing logic it replaced is now unit-tested in tests/test_graph.py, which was
 impossible when it lived inline here.
 
@@ -14,11 +14,12 @@ through session state.
 
 from __future__ import annotations
 
+import os
+
+import httpx
 import streamlit as st
 
-from auralith.config import Settings
-from auralith.graph.build import run_graph, summarise
-from auralith.providers import ProviderError, check_backend
+API_URL = os.getenv("AURALITH_API_URL", "http://localhost:8000")
 
 
 def _transcribe() -> str:
@@ -60,13 +61,6 @@ def start_chat_module() -> None:
     st.title("Auralith")
     st.caption("Chat Mode - routed by a LangGraph state machine")
 
-    settings = Settings.from_env()
-    try:
-        check_backend(settings)
-    except ProviderError as exc:
-        st.error(str(exc))
-        return
-
     st.session_state.setdefault("chat_prompt", "")
 
     if st.button("Capture voice"):
@@ -90,8 +84,21 @@ def start_chat_module() -> None:
         return
 
     with st.spinner("Routing..."):
-        state = run_graph(prompt, settings)
-    summary = summarise(state)
+        try:
+            resp = httpx.post(f"{API_URL}/chat", json={"query": prompt}, timeout=None)
+        except httpx.TransportError:
+            st.error(
+                f"Cannot reach the Auralith API at {API_URL}. "
+                "Start it with: uvicorn auralith.api:app --port 8000"
+            )
+            return
+    if resp.status_code >= 400:
+        try:
+            st.error(str(resp.json()["detail"]))
+        except Exception:  # noqa: BLE001
+            st.error(f"API error {resp.status_code}")
+        return
+    summary = resp.json()
 
     cols = st.columns(3)
     cols[0].metric("Route", summary["route"] or "—")
@@ -103,17 +110,17 @@ def start_chat_module() -> None:
     if summary["error"]:
         st.warning(f"Note: {summary['error']}")
 
-    if state.get("search_results"):
-        with st.expander(f"Web sources ({len(state['search_results'])})"):
-            for i, r in enumerate(state["search_results"], 1):
+    if summary["search_results"]:
+        with st.expander(f"Web sources ({len(summary['search_results'])})"):
+            for i, r in enumerate(summary["search_results"], 1):
                 st.markdown(f"**[{i}] [{r['title']}]({r['url']})**")
                 st.caption(r["snippet"])
 
-    if state.get("code"):
+    if summary["code"]:
         st.download_button(
             "Download code",
-            data=state["code"],
-            file_name=f"auralith_snippet.{state.get('language', 'txt')}",
+            data=summary["code"],
+            file_name=f"auralith_snippet.{summary.get('language') or 'txt'}",
         )
 
     # The execution trace. Makes the routing decision inspectable instead of

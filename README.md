@@ -116,8 +116,12 @@ graph TD;
 pip install -r requirements.txt
 ollama pull llama3.2:3b
 cp .env.example .env
+uvicorn auralith.api:app --port 8000
+# second terminal:
 streamlit run main.py
 ```
+
+The UI talks to the API over HTTP. `/ask` streams NDJSON (passages, then the full answer), not token-by-token. Image mode still runs locally.
 
 Set `AURALITH_PROVIDER=openai` and `OPENAI_API_KEY` to use hosted models instead.
 
