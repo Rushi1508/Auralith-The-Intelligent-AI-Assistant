@@ -40,6 +40,20 @@ METRICS: list[tuple[str, Callable[[Row], bool], Callable[[Row], float | None]]] 
         lambda r: None if "abstained" not in r else float(r["abstained"]),
     ),
     ("keyword_score", lambda r: True, lambda r: r.get("keyword_score")),
+    # Path-eval files (eval/eval_paths.py); RAG files have no "path" key.
+    *(
+        (
+            f"answer_correctness ({p})",
+            lambda r, p=p: r.get("path") == p,
+            lambda r: r.get("judge_score"),
+        )
+        for p in ("SearchWeb", "WriteCode", "Converse")
+    ),
+    (
+        "code_passes (WriteCode)",
+        lambda r: r.get("path") == "WriteCode",
+        lambda r: None if r.get("code_passes") is None else float(r["code_passes"]),
+    ),
 ]
 
 

@@ -217,6 +217,37 @@ OpenAI?", a known-bug question about pandas 2.2) now go to Converse. A larger
 router model (`qwen2.5:7b`) was not tried, because the 3B is now near the
 ceiling of these sets and a bigger router would slow every chat turn.
 
+## Path evaluation (Phase H)
+
+The router evaluation says whether a request reaches the right node; this
+measures what the node then produces. `eval/eval_paths.py` runs each request in
+`eval/paths.json` (54 requests, 18 per path) and `eval/paths_heldout.json` (24,
+8 per path, written before any results) through its own node and scores it.
+
+- **Router bypassed.** Requests go straight to `search_node`, `code_node` or
+  `converse_node`. In production `search_node` searches on the router's
+  rewritten `parameters`; here it searches on the raw user query, so search
+  quality is measured slightly pessimistically.
+- **Search cache.** Web results are cached in `eval/paths_search_cache.json`
+  (successful responses only), so reruns compare generators on identical
+  evidence. The set uses fixed facts about past events, never weather, prices
+  or "latest".
+- **Code is run, not only judged.** Python WriteCode items name an exact
+  signature and carry an assert snippet; the generated code plus the asserts run
+  in a fresh `python -I` subprocess with a timeout (pass = exit 0). There is no
+  OS or network isolation; the request sets are written by us and avoid file,
+  network and process access. SQL, bash and JavaScript items are judged only.
+- **Truncation is flagged.** The 512-token output cap can cut a code answer
+  off before its closing fence; such rows are marked `truncated` and fail the
+  asserts.
+- **Judge caveat.** The judge was validated on factual QA only, not on code or
+  checklist answers, so path scores from it are unvalidated; read them next to
+  `keyword_score` and `code_passes`. Citation stripping is skipped for code
+  answers, because it would turn `arr[0]` into `arr`.
+
+`eval/compare.py` gives paired bootstrap intervals per path
+(`answer_correctness (SearchWeb)` and so on, plus `code_passes (WriteCode)`).
+
 ## Known limitations
 
 These are real and an interviewer should be able to find them stated here
@@ -258,5 +289,5 @@ rather than have to extract them.
 7. **The router sets are small and self-written.** 84 requests in total. The
    held-out set has now been used once to judge the prompt fix, so any further
    prompt tuning needs fresh held-out requests. Routing is measured on its
-   own; the end-to-end answer quality of the search, code and converse paths
-   is not.
+   own. The answer quality of the search, code and converse paths now has a
+   harness (see Path evaluation) but no baseline run yet.

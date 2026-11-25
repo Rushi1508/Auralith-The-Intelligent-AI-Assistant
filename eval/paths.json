@@ -1,0 +1,505 @@
+{
+ "schema_version": "1.0",
+ "description": "Auralith path-quality set. 54 requests, 18 per path (SearchWeb, WriteCode, Converse), for end-to-end answer quality of each agent path after routing. Written 2026-11-25 before any path results.",
+ "labelling_notes": [
+  "Each request is run through its own node (search_node, code_node, converse_node) with the router bypassed. In production search_node searches on the router's rewritten `parameters`; here it searches on the raw user query.",
+  "`reference` is either a short answer or a checklist 'A correct answer must: (1) ... (2) ...'. It lists only what the request asks for.",
+  "`answer_keys` are case-insensitive substrings for a model-free proxy; they may be empty.",
+  "SearchWeb items are fixed facts about past events that need a lookup, not a model's memory; no weather, prices or 'latest'. WriteCode Python items carry `test`, an assert snippet appended to the generated code and run in a subprocess; SQL, bash and JavaScript items have test null and are judged only. Queries are distinct from eval/routes.json and eval/routes_heldout.json."
+ ],
+ "requests": [
+  {
+   "id": "ps-01",
+   "path": "SearchWeb",
+   "query": "Who won the 2022 FIFA World Cup final, and how was it decided?",
+   "reference": "Argentina won the 2022 final against France. It finished 3-3 after extra time and Argentina won 4-2 on penalties.",
+   "answer_keys": [
+    "Argentina"
+   ]
+  },
+  {
+   "id": "ps-02",
+   "path": "SearchWeb",
+   "query": "In which year was the first iPhone released?",
+   "reference": "2007 (the first iPhone went on sale in June 2007).",
+   "answer_keys": [
+    "2007"
+   ]
+  },
+  {
+   "id": "ps-03",
+   "path": "SearchWeb",
+   "query": "Who won the Nobel Prize in Literature in 2016?",
+   "reference": "Bob Dylan.",
+   "answer_keys": [
+    "Dylan"
+   ]
+  },
+  {
+   "id": "ps-04",
+   "path": "SearchWeb",
+   "query": "Which film won the Academy Award for Best Picture at the 92nd Academy Awards in February 2020?",
+   "reference": "Parasite (directed by Bong Joon-ho).",
+   "answer_keys": [
+    "Parasite"
+   ]
+  },
+  {
+   "id": "ps-05",
+   "path": "SearchWeb",
+   "query": "Who won the men's singles title at Wimbledon in 2019?",
+   "reference": "Novak Djokovic, who beat Roger Federer in the final.",
+   "answer_keys": [
+    "Djokovic"
+   ]
+  },
+  {
+   "id": "ps-06",
+   "path": "SearchWeb",
+   "query": "Who won the UEFA Euro 2024 final?",
+   "reference": "Spain won UEFA Euro 2024, beating England 2-1 in the final.",
+   "answer_keys": [
+    "Spain"
+   ]
+  },
+  {
+   "id": "ps-07",
+   "path": "SearchWeb",
+   "query": "Who directed the 2017 film Dunkirk?",
+   "reference": "Christopher Nolan.",
+   "answer_keys": [
+    "Nolan"
+   ]
+  },
+  {
+   "id": "ps-08",
+   "path": "SearchWeb",
+   "query": "On what date did the fire at Notre-Dame de Paris happen in 2019?",
+   "reference": "15 April 2019.",
+   "answer_keys": [
+    "April",
+    "2019"
+   ]
+  },
+  {
+   "id": "ps-09",
+   "path": "SearchWeb",
+   "query": "In what year was the first public release of the Python programming language (version 0.9.0)?",
+   "reference": "1991.",
+   "answer_keys": [
+    "1991"
+   ]
+  },
+  {
+   "id": "ps-10",
+   "path": "SearchWeb",
+   "query": "Which novel won the 2023 Booker Prize and who wrote it?",
+   "reference": "Prophet Song by Paul Lynch.",
+   "answer_keys": [
+    "Prophet Song",
+    "Lynch"
+   ]
+  },
+  {
+   "id": "ps-11",
+   "path": "SearchWeb",
+   "query": "Which three researchers received the ACM A.M. Turing Award for 2018?",
+   "reference": "Yoshua Bengio, Geoffrey Hinton and Yann LeCun.",
+   "answer_keys": [
+    "Bengio",
+    "Hinton",
+    "LeCun"
+   ]
+  },
+  {
+   "id": "ps-12",
+   "path": "SearchWeb",
+   "query": "Which city hosted the 1994 Winter Olympics?",
+   "reference": "Lillehammer, Norway.",
+   "answer_keys": [
+    "Lillehammer"
+   ]
+  },
+  {
+   "id": "ps-13",
+   "path": "SearchWeb",
+   "query": "Who was the first woman to win the Fields Medal, and in which year?",
+   "reference": "Maryam Mirzakhani, in 2014.",
+   "answer_keys": [
+    "Mirzakhani",
+    "2014"
+   ]
+  },
+  {
+   "id": "ps-14",
+   "path": "SearchWeb",
+   "query": "Which lander made the first soft landing on a comet in 2014, and which comet was it?",
+   "reference": "Philae (the lander of ESA's Rosetta mission), on comet 67P/Churyumov-Gerasimenko.",
+   "answer_keys": [
+    "Philae",
+    "Churyumov"
+   ]
+  },
+  {
+   "id": "ps-15",
+   "path": "SearchWeb",
+   "query": "On what date did India's Chandrayaan-3 lander touch down on the Moon?",
+   "reference": "23 August 2023.",
+   "answer_keys": [
+    "August",
+    "2023"
+   ]
+  },
+  {
+   "id": "ps-16",
+   "path": "SearchWeb",
+   "query": "Which player scored the winning goal in the 2010 FIFA World Cup final?",
+   "reference": "Andres Iniesta (Spain), in extra time against the Netherlands.",
+   "answer_keys": [
+    "Iniesta"
+   ]
+  },
+  {
+   "id": "ps-17",
+   "path": "SearchWeb",
+   "query": "Which country won the 2011 Cricket World Cup, and who was named player of the tournament?",
+   "reference": "India won the 2011 Cricket World Cup; Yuvraj Singh was player of the tournament.",
+   "answer_keys": [
+    "India",
+    "Yuvraj"
+   ]
+  },
+  {
+   "id": "ps-18",
+   "path": "SearchWeb",
+   "query": "In what year was the Hubble Space Telescope launched?",
+   "reference": "1990 (24 April 1990).",
+   "answer_keys": [
+    "1990"
+   ]
+  },
+  {
+   "id": "pc-01",
+   "path": "WriteCode",
+   "query": "Write a Python function `is_anagram(a: str, b: str) -> bool` that returns True if the two strings are anagrams of each other, ignoring case and spaces.",
+   "reference": "A correct answer must define is_anagram(a, b) that compares the letters of both strings case-insensitively after removing spaces (e.g. sorted letters or letter counts).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert is_anagram(\"Dormitory\", \"Dirty room\") is True\nassert is_anagram(\"abc\", \"abd\") is False\nassert is_anagram(\"\", \"\") is True\nassert is_anagram(\"Aa\", \"a\") is False"
+  },
+  {
+   "id": "pc-02",
+   "path": "WriteCode",
+   "query": "Write a Python function `flatten(nested: list) -> list` that flattens an arbitrarily nested list of lists into a flat list, preserving order.",
+   "reference": "A correct answer must define flatten(nested) that recursively (or with an explicit stack) expands nested lists into one flat list in original order.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert flatten([1, [2, [3, [4]], 5]]) == [1, 2, 3, 4, 5]\nassert flatten([]) == []\nassert flatten([[], [[]]]) == []\nassert flatten([[1, 2], [3]]) == [1, 2, 3]"
+  },
+  {
+   "id": "pc-03",
+   "path": "WriteCode",
+   "query": "Fix this function so it returns the second largest distinct value, returns None when there are fewer than two distinct values, and does not modify the input list. Keep the name and signature `second_largest(nums)`.\n\ndef second_largest(nums):\n    nums.sort()\n    return nums[-2]",
+   "reference": "A correct answer must: (1) return the second largest distinct value (duplicates of the maximum do not count); (2) return None when fewer than two distinct values exist; (3) not mutate the input (no in-place sort).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert second_largest([3, 1, 3, 2]) == 2\nassert second_largest([5, 5]) is None\nassert second_largest([1]) is None\nl = [3, 1, 2]\nassert second_largest(l) == 2\nassert l == [3, 1, 2]"
+  },
+  {
+   "id": "pc-04",
+   "path": "WriteCode",
+   "query": "Convert this JavaScript to a Python function `chunk(arr: list, size: int) -> list` with the same behaviour:\n\nfunction chunk(arr, size) {\n  const out = [];\n  for (let i = 0; i < arr.length; i += size) {\n    out.push(arr.slice(i, i + size));\n  }\n  return out;\n}",
+   "reference": "A correct answer must define chunk(arr, size) returning consecutive slices of length size, the last one possibly shorter, and [] for an empty list.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]\nassert chunk([], 3) == []\nassert chunk([1, 2], 5) == [[1, 2]]"
+  },
+  {
+   "id": "pc-05",
+   "path": "WriteCode",
+   "query": "Write a Python function `extract_hashtags(text: str) -> list[str]` that uses a regular expression to return the hashtags in the text, without the leading #, in order. A hashtag is a # at the start of the text or right after whitespace, followed by letters, digits or underscores.",
+   "reference": "A correct answer must define extract_hashtags(text) using a regex that only matches # at the start or after whitespace, captures the following word characters (letters, digits, underscore), and returns them without the #.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert extract_hashtags(\"Love #python and #AI_2024!\") == [\"python\", \"AI_2024\"]\nassert extract_hashtags(\"a#b #c\") == [\"c\"]\nassert extract_hashtags(\"no tags\") == []\nassert extract_hashtags(\"#first\") == [\"first\"]"
+  },
+  {
+   "id": "pc-06",
+   "path": "WriteCode",
+   "query": "Write a Python class `MinStack` with methods push(x), pop() (returns the removed value), top() (returns the top value without removing it) and get_min() (returns the smallest value currently on the stack). All operations must be O(1).",
+   "reference": "A correct answer must define MinStack where push, pop, top and get_min are all O(1), e.g. by keeping a second stack (or paired values) tracking the running minimum; pop returns the removed value.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "s = MinStack()\ns.push(3)\ns.push(1)\ns.push(2)\nassert s.get_min() == 1\nassert s.pop() == 2\nassert s.top() == 1\nassert s.pop() == 1\nassert s.get_min() == 3\nassert s.top() == 3"
+  },
+  {
+   "id": "pc-07",
+   "path": "WriteCode",
+   "query": "Write a Python function `median(nums: list[float]) -> float` that returns the median of a list of numbers without modifying the list, and raises ValueError if the list is empty.",
+   "reference": "A correct answer must define median(nums) that sorts a copy, returns the middle value for odd length and the mean of the two middle values for even length, raises ValueError for an empty list, and leaves the input unchanged.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert median([3, 1, 2]) == 2\nassert median([4, 1, 3, 2]) == 2.5\nl = [3, 1, 2]\nmedian(l)\nassert l == [3, 1, 2]\ntry:\n    median([])\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError(\"no ValueError\")"
+  },
+  {
+   "id": "pc-08",
+   "path": "WriteCode",
+   "query": "Write a Python function `merge_intervals(intervals: list[list[int]]) -> list[list[int]]` that merges overlapping intervals (intervals that touch, like [1,4] and [4,5], count as overlapping) and returns them sorted by start. Do not modify the input.",
+   "reference": "A correct answer must define merge_intervals that sorts by start, merges intervals whose start is <= the current end (touching counts), returns merged intervals sorted by start, and returns [] for empty input.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert merge_intervals([[1, 3], [2, 6], [8, 10], [15, 18]]) == [[1, 6], [8, 10], [15, 18]]\nassert merge_intervals([[1, 4], [4, 5]]) == [[1, 5]]\nassert merge_intervals([]) == []\nassert merge_intervals([[5, 6], [1, 2]]) == [[1, 2], [5, 6]]\nassert merge_intervals([[1, 10], [2, 3]]) == [[1, 10]]"
+  },
+  {
+   "id": "pc-09",
+   "path": "WriteCode",
+   "query": "Write a Python function `word_count(text: str) -> dict[str, int]` that counts word occurrences case-insensitively. A word is a maximal run of letters, digits or apostrophes; everything else separates words.",
+   "reference": "A correct answer must define word_count(text) that lowercases the text, splits it into runs of letters/digits/apostrophes, and returns a dict of counts; empty text gives {}.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert word_count(\"The cat. The DOG!\") == {\"the\": 2, \"cat\": 1, \"dog\": 1}\nassert word_count(\"\") == {}\nassert word_count(\"don't stop\") == {\"don't\": 1, \"stop\": 1}\nassert word_count(\"a-b a\") == {\"a\": 2, \"b\": 1}"
+  },
+  {
+   "id": "pc-10",
+   "path": "WriteCode",
+   "query": "Convert this JavaScript to a Python function `group_by(items, key_fn) -> dict` that returns a dict mapping each key to the list of items with that key, in input order:\n\nconst groupBy = (items, keyFn) => items.reduce((acc, item) => {\n  const k = keyFn(item);\n  (acc[k] = acc[k] || []).push(item);\n  return acc;\n}, {});",
+   "reference": "A correct answer must define group_by(items, key_fn) returning a dict from key to list of items in original order (a plain dict or defaultdict converted to dict); empty input gives {}.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert group_by([1, 2, 3, 4, 5], lambda x: x % 2) == {1: [1, 3, 5], 0: [2, 4]}\nassert group_by([], len) == {}\nassert group_by([\"a\", \"bb\", \"c\"], len) == {1: [\"a\", \"c\"], 2: [\"bb\"]}"
+  },
+  {
+   "id": "pc-11",
+   "path": "WriteCode",
+   "query": "This function is supposed to count vowels but always returns 0. Fix it so it counts vowels case-insensitively. Keep the name `count_vowels(s)`.\n\ndef count_vowels(s):\n    count = 0\n    for ch in s:\n        if ch in \"aeiou\":\n            count + 1\n    return count",
+   "reference": "A correct answer must: (1) actually increment the counter (count += 1, the original 'count + 1' does nothing); (2) match vowels case-insensitively (e.g. ch.lower()).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert count_vowels(\"Education\") == 5\nassert count_vowels(\"rhythm\") == 0\nassert count_vowels(\"AEIOU\") == 5\nassert count_vowels(\"\") == 0"
+  },
+  {
+   "id": "pc-12",
+   "path": "WriteCode",
+   "query": "Write a Python function `is_valid_parentheses(s: str) -> bool` that checks whether the brackets (), [] and {} in a string are balanced and correctly nested. Other characters are ignored.",
+   "reference": "A correct answer must define is_valid_parentheses(s) using a stack: push openers, on a closer pop and compare to the matching opener, fail on mismatch or empty stack, and require an empty stack at the end.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert is_valid_parentheses(\"([]{})\") is True\nassert is_valid_parentheses(\"(]\") is False\nassert is_valid_parentheses(\"((\") is False\nassert is_valid_parentheses(\"\") is True\nassert is_valid_parentheses(\")(\") is False\nassert is_valid_parentheses(\"a(b)c\") is True"
+  },
+  {
+   "id": "pc-13",
+   "path": "WriteCode",
+   "query": "Write a Python function `roman_to_int(s: str) -> int` that converts a Roman numeral (I, V, X, L, C, D, M, including subtractive forms like IV and CM) to an integer.",
+   "reference": "A correct answer must define roman_to_int(s) mapping symbols to values and subtracting a symbol when a larger one follows it (IV = 4, IX = 9, CM = 900).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert roman_to_int(\"III\") == 3\nassert roman_to_int(\"LVIII\") == 58\nassert roman_to_int(\"MCMXCIV\") == 1994\nassert roman_to_int(\"IX\") == 9"
+  },
+  {
+   "id": "pc-14",
+   "path": "WriteCode",
+   "query": "Write a Python function `rotate_matrix(matrix: list[list[int]]) -> list[list[int]]` that returns a new matrix rotated 90 degrees clockwise. The matrix may be rectangular, and an empty matrix gives an empty matrix.",
+   "reference": "A correct answer must define rotate_matrix returning a new list of lists where row i of the result is column i of the input read from bottom to top (e.g. [list(r) for r in zip(*matrix[::-1])]); an m x n input gives an n x m output.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert rotate_matrix([[1, 2], [3, 4]]) == [[3, 1], [4, 2]]\nassert rotate_matrix([[1, 2, 3], [4, 5, 6]]) == [[4, 1], [5, 2], [6, 3]]\nassert rotate_matrix([]) == []"
+  },
+  {
+   "id": "pc-15",
+   "path": "WriteCode",
+   "query": "Write a SQL query for a table employees(id, name, department, salary) that returns each department with its average salary, only for departments with more than 3 employees, highest average first.",
+   "reference": "A correct answer must: (1) SELECT department and AVG(salary) FROM employees; (2) GROUP BY department; (3) filter with HAVING COUNT(*) > 3 (not WHERE); (4) ORDER BY the average DESC.",
+   "answer_keys": [],
+   "language": "sql",
+   "test": null
+  },
+  {
+   "id": "pc-16",
+   "path": "WriteCode",
+   "query": "Write a bash command that prints the total number of lines across all .log files in the current directory (not subdirectories).",
+   "reference": "A correct answer must be a bash command that counts lines over all *.log files in the current directory only, as a single total, e.g. cat *.log | wc -l (wc -l *.log with its total line is also acceptable).",
+   "answer_keys": [],
+   "language": "bash",
+   "test": null
+  },
+  {
+   "id": "pc-17",
+   "path": "WriteCode",
+   "query": "Write a SQL query for a table employees(id, name, salary) that returns the second highest distinct salary, or NULL if there is none.",
+   "reference": "A correct answer must return the second highest DISTINCT salary as a single value, and NULL when fewer than two distinct salaries exist, e.g. SELECT (SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1) AS second_highest, or MAX(salary) WHERE salary < (SELECT MAX(salary) ...).",
+   "answer_keys": [],
+   "language": "sql",
+   "test": null
+  },
+  {
+   "id": "pc-18",
+   "path": "WriteCode",
+   "query": "Write a JavaScript function `unique(arr)` that returns a new array with duplicates removed, keeping the first occurrence of each value in its original order.",
+   "reference": "A correct answer must define unique(arr) returning a new array without duplicates, preserving the order of first occurrences (e.g. [...new Set(arr)] or filter with indexOf).",
+   "answer_keys": [],
+   "language": "javascript",
+   "test": null
+  },
+  {
+   "id": "pv-01",
+   "path": "Converse",
+   "query": "A shirt costs $40 and is on sale for 25% off. What is the sale price?",
+   "reference": "$30 (25% of 40 is 10, and 40 - 10 = 30).",
+   "answer_keys": [
+    "30"
+   ]
+  },
+  {
+   "id": "pv-02",
+   "path": "Converse",
+   "query": "What is the sum of all integers from 1 to 100?",
+   "reference": "5050.",
+   "answer_keys": [
+    "5050"
+   ]
+  },
+  {
+   "id": "pv-03",
+   "path": "Converse",
+   "query": "If 3 notebooks cost $4.50 in total, how much do 7 notebooks cost?",
+   "reference": "$10.50 (each notebook costs $1.50).",
+   "answer_keys": [
+    "10.5"
+   ]
+  },
+  {
+   "id": "pv-04",
+   "path": "Converse",
+   "query": "Solve for x: 3x + 7 = 28.",
+   "reference": "x = 7.",
+   "answer_keys": []
+  },
+  {
+   "id": "pv-05",
+   "path": "Converse",
+   "query": "Translate 'I would like a cup of coffee, please' into German.",
+   "reference": "Ich hätte gern eine Tasse Kaffee, bitte. (Ich möchte eine Tasse Kaffee, bitte is also correct.)",
+   "answer_keys": [
+    "Tasse Kaffee"
+   ]
+  },
+  {
+   "id": "pv-06",
+   "path": "Converse",
+   "query": "Translate 'The library closes at eight o'clock' into Spanish.",
+   "reference": "La biblioteca cierra a las ocho.",
+   "answer_keys": [
+    "biblioteca",
+    "ocho"
+   ]
+  },
+  {
+   "id": "pv-07",
+   "path": "Converse",
+   "query": "Translate 'Where can I buy a train ticket?' into Italian.",
+   "reference": "Dove posso comprare un biglietto del treno?",
+   "answer_keys": [
+    "biglietto",
+    "treno"
+   ]
+  },
+  {
+   "id": "pv-08",
+   "path": "Converse",
+   "query": "What is the difference between a process and a thread in an operating system?",
+   "reference": "A correct answer must: (1) say a process has its own separate memory address space; (2) say threads within a process share that memory and resources; (3) optionally that threads are cheaper to create and switch between.",
+   "answer_keys": [
+    "memory"
+   ]
+  },
+  {
+   "id": "pv-09",
+   "path": "Converse",
+   "query": "Explain what a hash table is and why lookups are fast on average.",
+   "reference": "A correct answer must: (1) say a hash function maps a key to a position (bucket/index) in an array; (2) say lookups take O(1) (constant) time on average; (3) mention that collisions (different keys, same slot) are handled, e.g. by chaining or open addressing.",
+   "answer_keys": [
+    "hash"
+   ]
+  },
+  {
+   "id": "pv-10",
+   "path": "Converse",
+   "query": "What does this Python expression return: sorted({3, 1, 2, 3, 1})",
+   "reference": "[1, 2, 3] (the set removes duplicates, sorted returns a list in ascending order).",
+   "answer_keys": [
+    "[1, 2, 3]"
+   ]
+  },
+  {
+   "id": "pv-11",
+   "path": "Converse",
+   "query": "What does this Python code print?\n\nx = [1, 2, 3]\ny = x\ny.append(4)\nprint(x)",
+   "reference": "[1, 2, 3, 4], because y and x refer to the same list object.",
+   "answer_keys": [
+    "[1, 2, 3, 4]"
+   ]
+  },
+  {
+   "id": "pv-12",
+   "path": "Converse",
+   "query": "What is wrong with using a mutable default argument, such as def add(item, items=[]), in Python?",
+   "reference": "A correct answer must: (1) say the default value is created once, when the function is defined, not on each call; (2) say that the same list is therefore shared between calls and keeps accumulating items; (3) optionally the fix: default to None and create a new list inside the function.",
+   "answer_keys": []
+  },
+  {
+   "id": "pv-13",
+   "path": "Converse",
+   "query": "Give me step-by-step instructions to set up a Python virtual environment and install the requests library in it.",
+   "reference": "A correct answer must: (1) create the environment with python -m venv <name>; (2) activate it (source <name>/bin/activate on Linux/macOS, <name>\\Scripts\\activate on Windows); (3) install with pip install requests.",
+   "answer_keys": [
+    "venv",
+    "pip install requests"
+   ]
+  },
+  {
+   "id": "pv-14",
+   "path": "Converse",
+   "query": "How do I undo my last git commit but keep my changes in the working directory?",
+   "reference": "A correct answer must use git reset HEAD~1 (--soft keeps the changes staged, the default --mixed keeps them unstaged) and must not recommend --hard, which discards the changes.",
+   "answer_keys": [
+    "reset"
+   ]
+  },
+  {
+   "id": "pv-15",
+   "path": "Converse",
+   "query": "Write exactly two sentences explaining why the sea is salty.",
+   "reference": "A correct answer must be exactly two sentences and say that rain and rivers wash dissolved salts/minerals from rocks into the sea (and/or that evaporation leaves the salt behind).",
+   "answer_keys": [
+    "salt"
+   ]
+  },
+  {
+   "id": "pv-16",
+   "path": "Converse",
+   "query": "Write a one-sentence definition of inflation that contains the word 'purchasing'.",
+   "reference": "A correct answer must be a single sentence that contains the word 'purchasing' and says inflation is a general rise in prices that reduces purchasing power.",
+   "answer_keys": [
+    "purchasing"
+   ]
+  },
+  {
+   "id": "pv-17",
+   "path": "Converse",
+   "query": "A rectangle has a perimeter of 30 cm and a length of 9 cm. What is its area?",
+   "reference": "54 cm squared (width = 15 - 9 = 6 cm, area = 9 x 6 = 54).",
+   "answer_keys": [
+    "54"
+   ]
+  },
+  {
+   "id": "pv-18",
+   "path": "Converse",
+   "query": "What is the time complexity of binary search, and why?",
+   "reference": "A correct answer must: (1) give O(log n); (2) explain that each comparison halves the remaining search range; (3) optionally that the data must be sorted.",
+   "answer_keys": [
+    "log"
+   ]
+  }
+ ]
+}

@@ -104,6 +104,7 @@ def judge_answer(
     candidate: str,
     answerable: bool = True,
     retries: int = 1,
+    strip_citations: bool = True,
 ) -> JudgeVerdict:
     """Score one answer. Never raises."""
     # Abstention: fully deterministic, no model needed.
@@ -118,8 +119,10 @@ def judge_answer(
     if abstained:
         return JudgeVerdict(score=0.0, reason="Abstained on an answerable question.")
 
+    # Off for code answers: the pattern would turn `arr[0]` into `arr`.
+    cleaned = _CITATION.sub("", candidate) if strip_citations else candidate
     prompt = JUDGE_PROMPT.format(
-        question=question, reference=reference, candidate=_CITATION.sub("", candidate).strip()
+        question=question, reference=reference, candidate=cleaned.strip()
     )
     last_raw = ""
     for attempt in range(retries + 1):

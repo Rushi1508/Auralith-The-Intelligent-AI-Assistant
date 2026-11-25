@@ -1,0 +1,223 @@
+{
+ "schema_version": "1.0",
+ "description": "Held-out path-quality set. 24 requests, 8 per path, written 2026-11-25 BEFORE any path results existed and never used to tune anything. Report it next to eval/paths.json so a prompt or model change tuned on the main set's failures can be checked on requests it never saw.",
+ "labelling_notes": [
+  "Each request is run through its own node (search_node, code_node, converse_node) with the router bypassed. In production search_node searches on the router's rewritten `parameters`; here it searches on the raw user query.",
+  "`reference` is either a short answer or a checklist 'A correct answer must: (1) ... (2) ...'. It lists only what the request asks for.",
+  "`answer_keys` are case-insensitive substrings for a model-free proxy; they may be empty.",
+  "SearchWeb items are fixed facts about past events that need a lookup, not a model's memory; no weather, prices or 'latest'. WriteCode Python items carry `test`, an assert snippet appended to the generated code and run in a subprocess; SQL, bash and JavaScript items have test null and are judged only. Queries are distinct from eval/routes.json and eval/routes_heldout.json."
+ ],
+ "requests": [
+  {
+   "id": "hps-01",
+   "path": "SearchWeb",
+   "query": "Who won the Nobel Peace Prize in 2024?",
+   "reference": "Nihon Hidankyo, the Japanese organisation of atomic bomb survivors.",
+   "answer_keys": [
+    "Hidankyo"
+   ]
+  },
+  {
+   "id": "hps-02",
+   "path": "SearchWeb",
+   "query": "Which country won the 2014 FIFA World Cup?",
+   "reference": "Germany, beating Argentina 1-0 in the final.",
+   "answer_keys": [
+    "Germany"
+   ]
+  },
+  {
+   "id": "hps-03",
+   "path": "SearchWeb",
+   "query": "In what year did the Berlin Wall fall?",
+   "reference": "1989 (9 November 1989).",
+   "answer_keys": [
+    "1989"
+   ]
+  },
+  {
+   "id": "hps-04",
+   "path": "SearchWeb",
+   "query": "Who won the Academy Award for Best Actor at the 90th Academy Awards in March 2018?",
+   "reference": "Gary Oldman, for Darkest Hour.",
+   "answer_keys": [
+    "Oldman"
+   ]
+  },
+  {
+   "id": "hps-05",
+   "path": "SearchWeb",
+   "query": "Which NASA rover landed on Mars in August 2012?",
+   "reference": "Curiosity.",
+   "answer_keys": [
+    "Curiosity"
+   ]
+  },
+  {
+   "id": "hps-06",
+   "path": "SearchWeb",
+   "query": "Who shared the 2013 Nobel Prize in Physics for the theory of the mass-giving mechanism of elementary particles?",
+   "reference": "Francois Englert and Peter Higgs.",
+   "answer_keys": [
+    "Englert"
+   ]
+  },
+  {
+   "id": "hps-07",
+   "path": "SearchWeb",
+   "query": "Which city hosted the 1998 Winter Olympics?",
+   "reference": "Nagano, Japan.",
+   "answer_keys": [
+    "Nagano"
+   ]
+  },
+  {
+   "id": "hps-08",
+   "path": "SearchWeb",
+   "query": "Which country won the 2019 Rugby World Cup in Japan?",
+   "reference": "South Africa, beating England 32-12 in the final.",
+   "answer_keys": [
+    "South Africa"
+   ]
+  },
+  {
+   "id": "hpc-01",
+   "path": "WriteCode",
+   "query": "Write a Python function `two_sum(nums: list[int], target: int) -> tuple[int, int] | None` that returns the indices (i, j) with i < j such that nums[i] + nums[j] == target, choosing the smallest i and then the smallest j, or None if there is no such pair.",
+   "reference": "A correct answer must define two_sum returning the pair of indices (i, j), i < j, of the first pair (smallest i, then smallest j) summing to target, and None if no pair exists.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert two_sum([2, 7, 11, 15], 9) == (0, 1)\nassert two_sum([3, 2, 4], 6) == (1, 2)\nassert two_sum([1, 2], 10) is None\nassert two_sum([3, 3], 6) == (0, 1)"
+  },
+  {
+   "id": "hpc-02",
+   "path": "WriteCode",
+   "query": "Write a Python function `compress(s: str) -> str` that run-length encodes a string, writing each character followed by the length of its run, so 'aaabcc' becomes 'a3b1c2'. An empty string gives an empty string.",
+   "reference": "A correct answer must define compress(s) producing char+count for every maximal run, including runs of length 1 ('b1'), and '' for empty input.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert compress(\"aaabcc\") == \"a3b1c2\"\nassert compress(\"\") == \"\"\nassert compress(\"abc\") == \"a1b1c1\"\nassert compress(\"aabbaa\") == \"a2b2a2\""
+  },
+  {
+   "id": "hpc-03",
+   "path": "WriteCode",
+   "query": "Fix this function so it handles trailing spaces and empty strings: it should return the length of the last word, 0 if there is none. Keep the name `last_word_length(s)`.\n\ndef last_word_length(s):\n    return len(s.split(\" \")[-1])",
+   "reference": "A correct answer must ignore trailing (and leading/repeated) spaces so 'Hello World  ' gives 5, and return 0 for '' and for a string of only spaces (e.g. using s.split() and checking for an empty result, or s.strip()).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert last_word_length(\"Hello World  \") == 5\nassert last_word_length(\"\") == 0\nassert last_word_length(\"   \") == 0\nassert last_word_length(\"one\") == 3"
+  },
+  {
+   "id": "hpc-04",
+   "path": "WriteCode",
+   "query": "Convert this JavaScript to a Python function `zip_lists(a: list, b: list) -> list[tuple]` that pairs elements by position and stops at the shorter list (the JavaScript version would produce undefined entries instead):\n\nconst zip = (a, b) => a.map((x, i) => [x, b[i]]);",
+   "reference": "A correct answer must define zip_lists(a, b) returning a list of tuples pairing a[i] with b[i], only up to the length of the shorter list (zip works).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert zip_lists([1, 2, 3], [\"a\", \"b\"]) == [(1, \"a\"), (2, \"b\")]\nassert zip_lists([], [1]) == []\nassert zip_lists([1], [2]) == [(1, 2)]"
+  },
+  {
+   "id": "hpc-05",
+   "path": "WriteCode",
+   "query": "Write a Python function `is_valid_hex_color(s: str) -> bool` that uses a regular expression to check for a CSS hex colour: a # followed by exactly 3 or exactly 6 hexadecimal digits, upper or lower case.",
+   "reference": "A correct answer must define is_valid_hex_color(s) with a regex requiring a leading #, then exactly 3 or exactly 6 hex digits [0-9a-fA-F], matching the whole string (fullmatch or ^...$).",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert is_valid_hex_color(\"#fff\") is True\nassert is_valid_hex_color(\"#A1B2C3\") is True\nassert is_valid_hex_color(\"#ggg\") is False\nassert is_valid_hex_color(\"fff\") is False\nassert is_valid_hex_color(\"#ffff\") is False"
+  },
+  {
+   "id": "hpc-06",
+   "path": "WriteCode",
+   "query": "Write a Python function `invert_dict(d: dict) -> dict` that maps each value of d to the list of keys that had that value, with keys in the original insertion order.",
+   "reference": "A correct answer must define invert_dict(d) returning a dict from each value to the list of keys having it, in insertion order; an empty dict gives {}.",
+   "answer_keys": [],
+   "language": "python",
+   "test": "assert invert_dict({\"a\": 1, \"b\": 2, \"c\": 1}) == {1: [\"a\", \"c\"], 2: [\"b\"]}\nassert invert_dict({}) == {}\nassert invert_dict({\"x\": 0}) == {0: [\"x\"]}"
+  },
+  {
+   "id": "hpc-07",
+   "path": "WriteCode",
+   "query": "Write a SQL query for a table orders(id, customer_id, total, created_at) that returns the customer_id of every customer who has placed at least 2 orders.",
+   "reference": "A correct answer must: (1) group orders by customer_id; (2) filter with HAVING COUNT(*) >= 2 (or > 1); (3) return customer_id.",
+   "answer_keys": [],
+   "language": "sql",
+   "test": null
+  },
+  {
+   "id": "hpc-08",
+   "path": "WriteCode",
+   "query": "Write a bash command that prints the 5 largest files, by size, anywhere under the current directory.",
+   "reference": "A correct answer must be a bash command that walks the directory tree for files, sorts by size in descending order and keeps the top 5 (e.g. find . -type f -exec du -b {} + | sort -rn | head -5, or find with -printf '%s %p\\n').",
+   "answer_keys": [],
+   "language": "bash",
+   "test": null
+  },
+  {
+   "id": "hpv-01",
+   "path": "Converse",
+   "query": "What is 2 to the power of 10?",
+   "reference": "1024.",
+   "answer_keys": [
+    "1024"
+   ]
+  },
+  {
+   "id": "hpv-02",
+   "path": "Converse",
+   "query": "A car uses 6 litres of fuel per 100 km. How many litres does it need for 250 km?",
+   "reference": "15 litres (6 x 2.5).",
+   "answer_keys": [
+    "15"
+   ]
+  },
+  {
+   "id": "hpv-03",
+   "path": "Converse",
+   "query": "Translate 'Thank you very much for your help' into French.",
+   "reference": "Merci beaucoup pour votre aide. (Merci beaucoup de votre aide is also correct.)",
+   "answer_keys": [
+    "merci",
+    "aide"
+   ]
+  },
+  {
+   "id": "hpv-04",
+   "path": "Converse",
+   "query": "What is the difference between TCP and UDP?",
+   "reference": "A correct answer must: (1) say TCP is connection-oriented and provides reliable, ordered delivery (acknowledgements, retransmission); (2) say UDP is connectionless and gives no delivery or ordering guarantee but has lower overhead/latency.",
+   "answer_keys": [
+    "reliab"
+   ]
+  },
+  {
+   "id": "hpv-05",
+   "path": "Converse",
+   "query": "What does this Python code print?\n\nprint(len([1, [2, 3], 4]))",
+   "reference": "3, because the inner list [2, 3] counts as a single element.",
+   "answer_keys": []
+  },
+  {
+   "id": "hpv-06",
+   "path": "Converse",
+   "query": "List the steps to make hard-boiled eggs.",
+   "reference": "A correct answer must: (1) put the eggs in water and bring it to a boil (or lower them into boiling water); (2) cook them for roughly 9 to 12 minutes; (3) cool them in cold or ice water before peeling.",
+   "answer_keys": []
+  },
+  {
+   "id": "hpv-07",
+   "path": "Converse",
+   "query": "Write a slogan of exactly three words for a bicycle repair shop.",
+   "reference": "Any slogan that is exactly three words long and is about bicycle repair.",
+   "answer_keys": []
+  },
+  {
+   "id": "hpv-08",
+   "path": "Converse",
+   "query": "What is the difference between '==' and 'is' in Python?",
+   "reference": "A correct answer must: (1) say == compares values for equality; (2) say 'is' compares object identity (whether both names refer to the same object).",
+   "answer_keys": [
+    "identity"
+   ]
+  }
+ ]
+}
