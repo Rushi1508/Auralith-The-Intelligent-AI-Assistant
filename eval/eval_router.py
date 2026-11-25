@@ -102,6 +102,10 @@ def main() -> int:
     parser.add_argument("--model", help="router model (default: configured generator)")
     parser.add_argument("--routes", default=str(ROOT / "eval" / "routes.json"))
     parser.add_argument("--out", help="result file (default: results/router_<model>.json)")
+    parser.add_argument(
+        "--delay", type=float, default=0.0,
+        help="seconds to sleep between requests (hosted free tiers rate-limit with 429)",
+    )
     args = parser.parse_args()
 
     settings = Settings.from_env()
@@ -111,6 +115,8 @@ def main() -> int:
 
     rows = []
     for i, item in enumerate(items, 1):
+        if args.delay and i > 1:
+            time.sleep(args.delay)
         t0 = time.perf_counter()
         result = route_one(item["query"], llm)
         rows.append({**item, **result, "seconds": round(time.perf_counter() - t0, 2)})
@@ -123,7 +129,13 @@ def main() -> int:
         json.dumps(
             {
                 "model": model,
-                "provider": settings.provider,
+                # Mirrors get_chat_model: only the generator model goes hosted.
+                "provider": (
+                    "gemini"
+                    if settings.generator_provider == "gemini"
+                    and model == settings.generator_model
+                    else settings.provider
+                ),
                 "temperature": settings.temperature,
                 "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "summary": summary,

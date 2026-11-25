@@ -222,8 +222,11 @@ ceiling of these sets and a bigger router would slow every chat turn.
 These are real and an interviewer should be able to find them stated here
 rather than have to extract them.
 
-1. **28 questions is a small sample.** One question is worth ~3.8 percentage
-   points of recall. `eval/compare.py` computes paired bootstrap 95% intervals
+1. **The sample is small.** The v2 set has 142 questions (one question is
+   ~0.7 points); on it the rerank gain clears zero (CI [+0.02, +0.15]), but
+   some question types have very few items (cross-document: 7). The history
+   below is from the original 28-question set, where one question is worth
+   ~3.8 percentage points of recall. `eval/compare.py` computes paired bootstrap 95% intervals
    between two runs (`results/comparison_ci.md`). They are wider than the
    earlier "~0.04" rule of thumb suggested. Under the fixed judge, baseline and
    tuned tie on answer correctness (14/28 each, interval [-0.29, +0.29]); the

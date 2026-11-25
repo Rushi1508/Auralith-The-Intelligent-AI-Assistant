@@ -82,6 +82,8 @@ Agent routing (llama3.2:3b, hand-labelled requests):
 The original prompt sent every misrouted request to web search, including code fixes
 and a translation. The held-out gain clears zero (paired CI [+0.04, +0.33]). The fix
 overcorrects slightly: 2 of 20 search questions now go to conversation.
+With `gemini-3.5-flash-lite` as the router, the revised prompt routes the main set **60/60**
+(6 replies needed a retry to parse; the held-out set was not re-run).
 
 Full tables, per-question-type breakdowns and limitations are in
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) and [`results/`](results/).
@@ -129,7 +131,7 @@ GEMINI_API_KEY=<your key>
 
 The default model is `gemini-3.5-flash-lite`; override it with `AURALITH_GENERATOR_MODEL`. Free-tier
 content may be used by Google to improve its products, so don't send confidential documents. The image
-mode still uses Ollama. The router prompts were tuned on llama3.2:3b and have not been re-measured with Gemini.
+mode still uses Ollama. The router prompts were tuned on llama3.2:3b; with Gemini the main router set scores 60/60.
 
 To reproduce the evaluation:
 

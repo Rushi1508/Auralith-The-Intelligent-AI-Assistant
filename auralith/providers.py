@@ -76,9 +76,9 @@ def get_chat_model(settings: Settings, model: str | None = None) -> BaseChatMode
     """Return a chat model. `model` overrides the configured generator."""
     name = model or settings.generator_model
 
-    # Only the default (generator) call goes hosted; explicit `model=` callers
-    # (the judge, the router eval) stay on Ollama.
-    if model is None and settings.generator_provider == "gemini":
+    # Only the generator model goes hosted; any other explicit `model=` (the
+    # judge) stays on Ollama.
+    if settings.generator_provider == "gemini" and model in (None, settings.generator_model):
         if not settings.gemini_api_key:
             raise ProviderError("AURALITH_GENERATOR_PROVIDER=gemini but GEMINI_API_KEY is not set.")
         from langchain_openai import ChatOpenAI
