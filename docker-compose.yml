@@ -1,0 +1,46 @@
+services:
+  api:
+    image: auralith
+    build: .
+    env_file: .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "8000:8000"
+    volumes:
+      - indexes:/tmp/auralith_indexes
+      - hf:/hf
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 6
+      start_period: 60s
+
+  ui:
+    image: auralith
+    build: .
+    env_file: .env
+    command: streamlit run main.py --server.address 0.0.0.0 --server.port 8501 --server.headless true
+    environment:
+      AURALITH_API_URL: http://api:8000
+      OLLAMA_HOST: http://ollama:11434
+    ports:
+      - "8501:8501"
+    volumes:
+      - hf:/hf
+    depends_on:
+      api:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama
+    profiles: [ollama]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  indexes:
+  hf:
+  ollama:

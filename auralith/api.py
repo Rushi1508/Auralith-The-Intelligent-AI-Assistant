@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from auralith.config import PRODUCTION_CONFIG, Settings
@@ -47,6 +47,11 @@ def _check_backend(settings: Settings) -> None:
         check_backend(settings)
     except ProviderError as exc:
         raise HTTPException(503, str(exc)) from exc
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/docs")
 
 
 @app.get("/health")

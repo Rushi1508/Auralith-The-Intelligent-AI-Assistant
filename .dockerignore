@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+claude.txt
+.claude
+__pycache__
+**/__pycache__
+.pytest_cache
+.chroma
+results
+eval/corpus/*.pdf
+venv
+.venv

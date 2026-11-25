@@ -1,5 +1,7 @@
 # Auralith
 
+[![CI](https://github.com/Rushi1508/Auralith-The-Intelligent-AI-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Rushi1508/Auralith-The-Intelligent-AI-Assistant/actions/workflows/ci.yml)
+
 **A document Q&A assistant where every design decision is backed by a measurement.**
 
 Ask questions about a PDF and get answers that cite their source passages. General
@@ -118,7 +120,7 @@ ollama pull llama3.2:3b
 cp .env.example .env
 uvicorn auralith.api:app --port 8000
 # second terminal:
-streamlit run main.py
+streamlit run main.py   # on Windows, if `streamlit` isn't found: python -m streamlit run main.py
 ```
 
 The UI talks to the API over HTTP. `/ask` streams NDJSON (passages, then the full answer), not token-by-token. Image mode still runs locally.
@@ -145,11 +147,29 @@ ollama pull qwen2.5:7b                  # judge model
 python eval/run_eval.py --config production   # or --config baseline
 ```
 
-Tests: `pytest -m "not slow"`. The suite covers the metrics, chunking, retrieval, the agent graph's recovery paths (driven by a scripted fake model) and the judge.
+Tests: `pytest -m "not slow and not ollama and not corpus"`. The suite covers the metrics, chunking, retrieval, the agent graph's recovery paths (driven by a scripted fake model) and the judge.
+
+## Run with Docker
+
+```bash
+cp .env.example .env     # then set AURALITH_GENERATOR_PROVIDER=gemini and GEMINI_API_KEY
+docker compose up --build
+```
+
+UI at http://localhost:8501, API docs at http://localhost:8000/docs.
+
+For local models instead, start Ollama too and pull a model:
+
+```bash
+docker compose --profile ollama up --build
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+The embedding and reranker models download once into the `hf` volume; indexes are cached in the `indexes` volume; after a restart, re-upload the PDF (it reuses the cached index).
 
 ## Limits
 
-This is a local project, not a deployed product. The evaluation uses 142 questions on
+This runs locally or via Docker Compose; it is not a deployed product. The evaluation uses 142 questions on
 3 NLP papers (the original 28 are superseded); small subgroups such as cross-document (n=7) are
 too small to conclude from, and the judge is a local 7B model checked against only 24 hand labels. Settings were tuned
 one at a time rather than over a full grid, and answer quality with the default 3B CPU
