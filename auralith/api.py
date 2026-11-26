@@ -216,6 +216,10 @@ def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dic
                 pdf_path = Path(tmp) / "upload.pdf"
                 pdf_path.write_bytes(data)
                 docs = load_pdf(pdf_path, doc_id=name)
+                if not any(d.page_content.strip() for d in docs):
+                    raise HTTPException(
+                        422, "PDF has no extractable text (scanned images need OCR first)."
+                    )
                 index_root = Path(tempfile.gettempdir()) / "auralith_indexes" / doc_id
                 store, report = build_index(docs, config, settings, root=index_root)
                 chunks = load_chunks_for_bm25(docs, config)

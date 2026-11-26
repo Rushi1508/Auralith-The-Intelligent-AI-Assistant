@@ -77,6 +77,15 @@ def test_ingest_rejects_too_large(client, monkeypatch):
     assert r.status_code == 413
 
 
+def test_ingest_rejects_pdf_without_text(client, monkeypatch, sample_docs):
+    blank = [d.model_copy(update={"page_content": "  "}) for d in sample_docs]
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: blank)
+    r = client.post("/ingest", files={"file": ("scan.pdf", PDF, "application/pdf")})
+    assert r.status_code == 422
+    assert "no extractable text" in r.json()["detail"]
+    assert api.DOCS == {}
+
+
 def test_ingest_then_ask_happy_path(client, monkeypatch, sample_docs):
     loads = []
     monkeypatch.setattr(
