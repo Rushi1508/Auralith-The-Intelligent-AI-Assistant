@@ -110,6 +110,7 @@ def answer_question(
     retriever: BaseRetriever,
     config: RetrievalConfig,
     settings: Settings,
+    fallback: BaseRetriever | None = None,
 ) -> RagResult:
     """Retrieve, generate, and return both the answer and its evidence.
 
@@ -119,8 +120,16 @@ def answer_question(
     """
     started = time.perf_counter()
     passages: list[Document] = []
+    meta: dict[str, object] = {}
     try:
-        passages = retrieve(retriever, question, config)
+        try:
+            passages = retrieve(retriever, question, config)
+        except Exception as exc:
+            if fallback is None:
+                raise
+            log.warning("Retrieval failed (%s); using fallback retriever", exc)
+            passages = retrieve(fallback, question, config)
+            meta["degraded"] = f"{type(exc).__name__}: {exc}"
         prompt = ANSWER_PROMPT.format_messages(
             context=format_passages(passages), question=question
         )
@@ -135,6 +144,7 @@ def answer_question(
             latency_seconds=round(time.perf_counter() - started, 3),
             config_slug=config.slug,
             error=f"{type(exc).__name__}: {exc}",
+            meta=meta,
         )
 
     return RagResult(
@@ -144,4 +154,5 @@ def answer_question(
         latency_seconds=round(time.perf_counter() - started, 3),
         config_slug=config.slug,
         abstained=is_abstention(text),
+        meta=meta,
     )

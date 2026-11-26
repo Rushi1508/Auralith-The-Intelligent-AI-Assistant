@@ -108,6 +108,8 @@ def start_pdf_module() -> None:
     if answer.get("error"):
         st.error(f"Failed: {answer['error']}")
         return
+    if answer.get("degraded"):
+        st.caption("Vector search unavailable; answered with keyword (BM25) retrieval.")
 
     abstained = answer.get("abstained", False)
     if abstained:

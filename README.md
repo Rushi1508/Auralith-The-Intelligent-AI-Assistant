@@ -172,6 +172,14 @@ docker compose exec ollama ollama pull llama3.2:3b
 
 The embedding and reranker models download once into the `hf` volume; vectors and chat state live in the `postgres` service (pgvector), in the `pgdata` volume. After a restart, re-upload the PDF (the vectors are reused; the upload registry is in memory).
 
+## Limits and degraded mode
+
+- Caps: uploads over `AURALITH_MAX_UPLOAD_MB` (25) return 413; questions/queries over `AURALITH_MAX_QUESTION_CHARS` (2000) return 422; more than `AURALITH_MAX_INFLIGHT` (4) concurrent ingest/ask/chat requests return 503 with `Retry-After`.
+- If vector retrieval fails (e.g. Postgres down), `/ask` falls back to BM25 over the same chunks and flags the answer as degraded.
+- `/health` always returns 200; `status` is `degraded` and `checks` lists what is wrong (database unreachable, last retrieval fell back).
+- `PGCONNECT_TIMEOUT` (default 5s) bounds how long a dead database can stall a request.
+- CPU-only local Ollama users should set `AURALITH_TIMEOUT=600`; the default 120s is too short for a 3B model on CPU.
+
 ## Limits
 
 This runs locally or via Docker Compose; it is not a deployed product. The evaluation uses 142 questions on

@@ -35,7 +35,7 @@ from auralith.graph.state import AgentState, initial_state
 
 log = logging.getLogger(__name__)
 
-# shortcut: unbounded per-session growth, replace with TTL/Postgres-only in I-4
+# shortcut: unbounded per-session growth, replace with TTL/Postgres-only in a later phase
 _MEMORY = InMemorySaver()
 
 

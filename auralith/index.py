@@ -52,7 +52,7 @@ def _pg_engine(url: str):
 
     # psycopg2 is not installed (psycopg 3 is); one pool per URL.
     url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-    return sqlalchemy.create_engine(url)
+    return sqlalchemy.create_engine(url, pool_pre_ping=True)
 
 
 def _build_pgvector(docs, config, settings, root, force, embeddings):

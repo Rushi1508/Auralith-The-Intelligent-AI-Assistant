@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 
 log = logging.getLogger(__name__)
@@ -72,12 +73,18 @@ def _search_ddgs(query: str, max_results: int) -> SearchResponse:
     except ImportError as exc:
         return SearchResponse(query, backend="ddgs", error=f"ddgs not installed: {exc}")
 
-    try:
-        with DDGS() as ddgs:
-            raw = list(ddgs.text(query, max_results=max_results))
-    except Exception as exc:  # noqa: BLE001 - network/ratelimit/parse all land here
-        log.warning("ddgs search failed for %r: %s", query, exc)
-        return SearchResponse(query, backend="ddgs", error=f"{type(exc).__name__}: {exc}")
+    for attempt in (1, 2):  # ddgs rate limits are often transient
+        try:
+            with DDGS() as ddgs:
+                raw = list(ddgs.text(query, max_results=max_results))
+            break
+        except Exception as exc:  # noqa: BLE001 - network/ratelimit/parse all land here
+            log.warning("ddgs search failed for %r (attempt %d): %s", query, attempt, exc)
+            if attempt == 2:
+                return SearchResponse(
+                    query, backend="ddgs", error=f"{type(exc).__name__}: {exc}"
+                )
+            time.sleep(1)
 
     return SearchResponse(
         query=query,

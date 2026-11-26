@@ -29,3 +29,11 @@ def test_gemini_defaults_to_a_gemini_model(monkeypatch):
     monkeypatch.setenv("AURALITH_GENERATOR_PROVIDER", "gemini")
     monkeypatch.delenv("AURALITH_GENERATOR_MODEL", raising=False)
     assert Settings.from_env().generator_model.startswith("gemini")
+
+
+def test_ollama_model_has_timeout():
+    from auralith.providers import get_chat_model
+
+    get_chat_model.cache_clear()
+    m = get_chat_model(Settings(request_timeout=7))
+    assert m.client_kwargs == {"timeout": 7}

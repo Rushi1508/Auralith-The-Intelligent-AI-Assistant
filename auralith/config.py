@@ -27,6 +27,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# psycopg/libpq default is 130s, which would hang /ask and /chat on an unreachable DB.
+os.environ.setdefault("PGCONNECT_TIMEOUT", "5")
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CORPUS_DIR = REPO_ROOT / "eval" / "corpus"
 INDEX_DIR = REPO_ROOT / ".chroma"

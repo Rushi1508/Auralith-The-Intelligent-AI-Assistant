@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 
 import pytest
 from fastapi.testclient import TestClient
@@ -41,6 +42,8 @@ class FakeRetriever:
 @pytest.fixture(autouse=True)
 def client(monkeypatch):
     api.DOCS.clear()
+    api.DEGRADED.clear()
+    monkeypatch.setattr("auralith.api._probe_db", lambda url: None)
     monkeypatch.setattr("auralith.api.check_backend", lambda s: None)
     return TestClient(api.app)
 
@@ -52,6 +55,7 @@ def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+    assert r.json()["checks"] == {}
     assert r.json()["generator_model"] == Settings.from_env().generator_model
 
 
@@ -115,3 +119,85 @@ def test_chat_with_fake_graph_model(client, monkeypatch):
     assert r.json()["route"] == "Converse"
     assert r.json()["answer"] == "Hello!"
     assert r.json()["thread_id"] == "t1"
+
+
+class DownRetriever:
+    def invoke(self, q, **_: object):
+        raise ConnectionError("db down")
+
+
+class BrokenModel:
+    def invoke(self, prompt, **_: object):
+        raise TimeoutError("llm slow")
+
+
+def _ingest(client, monkeypatch, sample_docs, dense):
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: sample_docs)
+    report = IndexBuildReport("k", 7, 0.1, False, {})
+    monkeypatch.setattr("auralith.api.build_index", lambda *a, **k: (object(), report))
+    monkeypatch.setattr("auralith.api.build_retriever", lambda *a, **k: dense)
+    up = {"file": ("a.pdf", PDF, "application/pdf")}
+    return client.post("/ingest", files=up).json()["doc_id"]
+
+
+def _ask(client, doc_id):
+    r = client.post("/ask", json={"doc_id": doc_id, "question": "encoder layers"})
+    return [json.loads(line) for line in r.text.splitlines()]
+
+
+def test_health_degraded_when_db_down(client, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+    monkeypatch.setattr("auralith.api._probe_db", lambda url: "OperationalError: x")
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json()["status"] == "degraded"
+    assert "database" in r.json()["checks"]
+
+
+def test_ask_falls_back_to_bm25(client, monkeypatch, sample_docs):
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: FakeChatModel("ok [1]"))
+    doc_id = _ingest(client, monkeypatch, sample_docs, DownRetriever())
+    events = _ask(client, doc_id)
+    assert events[0]["passages"]
+    assert events[1]["degraded"] is True and events[1]["error"] is None
+    h = client.get("/health").json()
+    assert h["status"] == "degraded" and "retrieval" in h["checks"]
+
+    api.DOCS[doc_id]["retriever"] = FakeRetriever(sample_docs)
+    assert _ask(client, doc_id)[1]["degraded"] is False
+    assert client.get("/health").json()["checks"] == {}
+
+
+def test_ask_llm_error_does_not_fall_back(client, monkeypatch, sample_docs):
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: BrokenModel())
+    doc_id = _ingest(client, monkeypatch, sample_docs, FakeRetriever(sample_docs))
+
+    class Spy(FakeRetriever):
+        called = False
+
+        def invoke(self, q, **_: object):
+            Spy.called = True
+            return self.docs
+
+    api.DOCS[doc_id]["sparse"] = Spy(sample_docs)
+    answer = _ask(client, doc_id)[1]
+    assert answer["error"] and answer["degraded"] is False
+    assert Spy.called is False
+
+
+def test_question_and_query_too_long_422(client, monkeypatch, sample_docs):
+    doc_id = _ingest(client, monkeypatch, sample_docs, FakeRetriever(sample_docs))
+    long = "x" * (api.MAX_QUESTION_CHARS + 1)
+    r = client.post("/ask", json={"doc_id": doc_id, "question": long})
+    assert r.status_code == 422
+    assert client.post("/chat", json={"query": long}).status_code == 422
+    r = client.post("/chat", json={"query": "hi", "thread_id": "t" * 129})
+    assert r.status_code == 422
+
+
+def test_busy_returns_503(client, monkeypatch):
+    sem = threading.BoundedSemaphore(1)
+    sem.acquire()
+    monkeypatch.setattr("auralith.api._SLOTS", sem)
+    r = client.post("/chat", json={"query": "hi"})
+    assert r.status_code == 503 and r.headers["Retry-After"] == "5"

@@ -116,6 +116,7 @@ def get_chat_model(settings: Settings, model: str | None = None) -> BaseChatMode
         # See Settings.max_output_tokens. Uniform across configs, so it cannot
         # bias a comparison.
         num_predict=settings.max_output_tokens,
+        client_kwargs={"timeout": settings.request_timeout},
     )
 
 
