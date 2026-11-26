@@ -9,16 +9,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
+import re
 import tempfile
 import threading
+import time
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse, Response, StreamingResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 import psycopg
 from pydantic import BaseModel, Field
 
@@ -46,6 +50,13 @@ from auralith.registry import (
 from auralith.retrievers import build_retriever, build_sparse_retriever
 
 app = FastAPI(title="Auralith")
+
+logging.basicConfig(
+    level=os.getenv("AURALITH_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+log = logging.getLogger("auralith.api")
+_RID = re.compile(r"[A-Za-z0-9._-]{1,64}")  # client ids are logged: no spaces/newlines
 
 MAX_UPLOAD_BYTES = int(os.getenv("AURALITH_MAX_UPLOAD_MB", "25")) * 1024 * 1024
 MAX_QUESTION_CHARS = int(os.getenv("AURALITH_MAX_QUESTION_CHARS", "2000"))
@@ -86,7 +97,33 @@ def _slot() -> Iterator[None]:
         _SLOTS.release()
 
 
-def current_user(x_api_key: Annotated[str | None, Header()] = None) -> str:
+@app.middleware("http")
+async def request_log(request: Request, call_next):
+    """X-Request-ID on every response plus one JSON access-log line per request."""
+    rid = request.headers.get("x-request-id", "")
+    rid = rid if _RID.fullmatch(rid) else uuid.uuid4().hex[:16]
+    request.state.rid = rid
+    t0 = time.perf_counter()
+    try:
+        resp = await call_next(request)
+    except Exception:
+        log.exception("unhandled error rid=%s path=%s", rid, request.url.path)
+        resp = JSONResponse({"detail": "Internal error", "request_id": rid}, status_code=500)
+    resp.headers["X-Request-ID"] = rid
+    log.info(json.dumps({
+        "rid": rid,
+        "method": request.method,
+        "path": request.url.path,
+        "status": resp.status_code,
+        "ms": round((time.perf_counter() - t0) * 1000, 1),
+        "user": getattr(request.state, "user", None),
+    }))
+    return resp
+
+
+def current_user(
+    request: Request, x_api_key: Annotated[str | None, Header()] = None
+) -> str:
     """API-key owner; "" (auth off) when AURALITH_API_KEYS is unset."""
     try:
         keys = load_keys()
@@ -99,6 +136,7 @@ def current_user(x_api_key: Annotated[str | None, Header()] = None) -> str:
         raise HTTPException(
             401, "Invalid or missing API key.", headers={"WWW-Authenticate": "ApiKey"}
         )
+    request.state.user = user
     return user
 
 

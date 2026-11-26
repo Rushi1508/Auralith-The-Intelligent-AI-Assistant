@@ -307,3 +307,26 @@ def test_list_and_delete_own_docs_only(client, monkeypatch, sample_docs):
     assert client.post("/ask", json=body, headers=a).status_code == 404
     assert client.delete(f"/documents/{id_a}", headers=a).status_code == 404
     assert client.get("/documents").status_code == 401
+
+
+def test_request_id_and_access_log(client, monkeypatch, caplog):
+    a, _ = _keys(monkeypatch)
+    r = client.get("/documents", headers={**a, "X-Request-ID": "abc-123"})
+    assert r.headers["X-Request-ID"] == "abc-123"
+    bad = client.get("/health", headers={"X-Request-ID": "x\ny"}).headers["X-Request-ID"]
+    assert bad != "x\ny" and len(bad) == 16
+    with caplog.at_level("INFO", logger="auralith.api"):
+        client.get("/documents", headers={**a, "X-Request-ID": "r1"})
+    line = json.loads(caplog.records[-1].getMessage())
+    assert line["rid"] == "r1" and line["user"] == "alice" and line["status"] == 200
+
+
+def test_unhandled_error_500_with_request_id(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr("auralith.api.run_graph", boom)
+    c = TestClient(api.app, raise_server_exceptions=False)
+    r = c.post("/chat", json={"query": "hi"}, headers={"X-Request-ID": "r2"})
+    assert r.status_code == 500 and r.json()["request_id"] == "r2"
+    assert r.headers["X-Request-ID"] == "r2"
