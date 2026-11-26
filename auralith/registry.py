@@ -77,6 +77,29 @@ def get_doc(url: str, owner: str, doc_id: str) -> dict | None:
     return row[0] if row else None
 
 
+def list_docs(url: str, owner: str) -> list[dict]:
+    ensure_schema(url)
+    with _pg_engine(url).connect() as c:
+        rows = c.execute(
+            text("SELECT info FROM auralith_docs WHERE owner = :o ORDER BY created_at DESC"),
+            {"o": owner},
+        ).all()
+    return [r[0] for r in rows]
+
+
+def delete_doc(url: str, owner: str, doc_id: str, collection: str) -> bool:
+    """Drop the registry row and its pgvector collection (embeddings cascade)."""
+    ensure_schema(url)
+    with _pg_engine(url).begin() as c:
+        gone = c.execute(
+            text("DELETE FROM auralith_docs WHERE owner = :o AND doc_id = :d RETURNING doc_id"),
+            {"o": owner, "d": doc_id},
+        ).first()
+        if gone:
+            c.execute(text("DELETE FROM langchain_pg_collection WHERE name = :n"), {"n": collection})
+    return gone is not None
+
+
 # shortcut: env key list, adding/revoking needs an api recreate; move to a table if keys must change at runtime
 def _main() -> None:
     if len(sys.argv) != 3 or sys.argv[1] != "create-key" or not _USER.match(sys.argv[2]):

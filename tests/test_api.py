@@ -286,3 +286,24 @@ def test_malformed_keys_fail_closed(client, monkeypatch):
     assert client.post("/ingest", files=pdf).status_code == 503
     assert client.post("/ask", json={"doc_id": "x", "question": "q"}).status_code == 503
     assert client.post("/chat", json={"query": "hi"}).status_code == 503
+
+
+def test_list_and_delete_own_docs_only(client, monkeypatch, sample_docs):
+    a, b = _keys(monkeypatch)
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: sample_docs)
+    report = IndexBuildReport("k", 7, 0.1, False, {})
+    monkeypatch.setattr("auralith.api.build_index", lambda *a, **k: (object(), report))
+    monkeypatch.setattr(
+        "auralith.api.build_retriever", lambda *a, **k: FakeRetriever(sample_docs)
+    )
+    up = {"file": ("a.pdf", PDF, "application/pdf")}
+    id_a = client.post("/ingest", files=up, headers=a).json()["doc_id"]
+    assert [d["doc_id"] for d in client.get("/documents", headers=a).json()] == [id_a]
+    assert client.get("/documents", headers=b).json() == []
+    assert client.delete(f"/documents/{id_a}", headers=b).status_code == 404
+    assert client.delete(f"/documents/{id_a}", headers=a).status_code == 204
+    assert client.get("/documents", headers=a).json() == []
+    body = {"doc_id": id_a, "question": "q"}
+    assert client.post("/ask", json=body, headers=a).status_code == 404
+    assert client.delete(f"/documents/{id_a}", headers=a).status_code == 404
+    assert client.get("/documents").status_code == 401

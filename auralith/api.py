@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, Response, StreamingResponse
 import psycopg
 from pydantic import BaseModel, Field
 
@@ -34,7 +34,15 @@ from auralith.index import (
 from auralith.ingest import load_pdf
 from auralith.providers import ProviderError, check_backend
 from auralith.rag import answer_question
-from auralith.registry import ensure_schema, get_doc, load_keys, save_doc, user_for_key
+from auralith.registry import (
+    delete_doc,
+    ensure_schema,
+    get_doc,
+    list_docs,
+    load_keys,
+    save_doc,
+    user_for_key,
+)
 from auralith.retrievers import build_retriever, build_sparse_retriever
 
 app = FastAPI(title="Auralith")
@@ -104,13 +112,15 @@ def _get_doc(doc_id: str, owner: str, settings: Settings) -> dict | None:
     if not settings.database_url:
         doc = DOCS.get(doc_id)
         return doc if doc and doc["info"].get("owner", "") == owner else None
-    if hit := _CACHE.get((owner, doc_id)):
-        return hit
     try:
+        # Registry checked even on a cache hit: another worker may have deleted the doc.
         ensure_schema(settings.database_url)
         info = get_doc(settings.database_url, owner, doc_id)
         if info is None:
+            _CACHE.pop((owner, doc_id), None)
             return None
+        if hit := _CACHE.get((owner, doc_id)):
+            return hit
         coll = collection_name(doc_id, PRODUCTION_CONFIG)
         store = open_pgvector(coll, settings)
         chunks = load_pg_chunks(coll, settings)
@@ -253,6 +263,39 @@ def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dic
         else:
             DOCS[doc_id] = entry
         return info
+
+
+@app.get("/documents")
+def list_documents(user: Annotated[str, Depends(current_user)]) -> list[dict]:
+    """The caller's ingested documents, newest first (dev mode: insertion order)."""
+    settings = Settings.from_env()
+    if not settings.database_url:
+        return [d["info"] for d in DOCS.values() if d["info"].get("owner", "") == user]
+    try:
+        return list_docs(settings.database_url, user)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+
+
+@app.delete("/documents/{doc_id}", status_code=204)
+def delete_document(doc_id: str, user: Annotated[str, Depends(current_user)]) -> Response:
+    settings = Settings.from_env()
+    with _doc_lock(settings, doc_id):  # don't race an in-flight ingest of the same doc
+        if not settings.database_url:
+            doc = DOCS.get(doc_id)
+            found = bool(doc and doc["info"].get("owner", "") == user)
+            if found:
+                del DOCS[doc_id]
+        else:
+            coll = collection_name(doc_id, PRODUCTION_CONFIG)
+            try:
+                found = delete_doc(settings.database_url, user, doc_id, coll)
+            except Exception as exc:  # noqa: BLE001
+                raise HTTPException(503, "Database unavailable") from exc
+            _CACHE.pop((user, doc_id), None)
+    if not found:
+        raise HTTPException(404, "Unknown doc_id.")
+    return Response(status_code=204)
 
 
 @app.post("/ask")

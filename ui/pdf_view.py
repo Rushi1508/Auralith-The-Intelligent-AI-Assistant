@@ -54,9 +54,47 @@ def start_pdf_module() -> None:
 
     uploaded = st.file_uploader("Upload a PDF", type=["pdf"])
     if uploaded is None:
-        st.info("Upload a PDF to begin.")
-        return
+        info = _pick_existing()
+        if info is None:
+            return
+    else:
+        info = _ingest(uploaded)
+        if info is None:
+            return
+    _ask(info)
 
+
+def _pick_existing() -> dict | None:
+    """Choose (or delete) one of the caller's already-ingested documents."""
+    try:
+        resp = httpx.get(f"{API_URL}/documents", headers=_headers(), timeout=30)
+    except httpx.TransportError:
+        st.error(_DOWN)
+        return None
+    if resp.status_code >= 400:
+        st.error(_detail(resp))
+        return None
+    docs = resp.json()
+    if not docs:
+        st.info("Upload a PDF to begin.")
+        return None
+    info = st.selectbox(
+        "Or choose one of your documents",
+        docs,
+        format_func=lambda d: f"{d['filename']} ({d['n_pages']} pages)",
+    )
+    if st.button("Delete this document"):
+        r = httpx.delete(
+            f"{API_URL}/documents/{info['doc_id']}", headers=_headers(), timeout=30
+        )
+        if r.status_code >= 400:
+            st.error(_detail(r))
+            return None
+        st.rerun()
+    return info
+
+
+def _ingest(uploaded) -> dict | None:
     file_bytes = uploaded.getvalue()
     with st.spinner("Indexing document (first time only)..."):
         try:
@@ -68,12 +106,14 @@ def start_pdf_module() -> None:
             )
         except httpx.TransportError:
             st.error(_DOWN)
-            return
+            return None
     if resp.status_code >= 400:
         st.error(_detail(resp))
-        return
-    info = resp.json()
+        return None
+    return resp.json()
 
+
+def _ask(info: dict) -> None:
     cols = st.columns(4)
     cols[0].metric("Pages", info["n_pages"])
     cols[1].metric("Chunks", info["n_chunks"])

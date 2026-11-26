@@ -174,7 +174,7 @@ The embedding and reranker models download once into the `hf` volume; vectors, t
 
 ### Auth and workers
 
-- `python -m auralith.registry create-key alice` prints a raw key once plus an `alice:<sha256>` entry. Put entries in `.env` as `AURALITH_API_KEYS=alice:<hash>,bob:<hash>`; clients send `X-API-Key: <raw key>` (UI: sidebar field or `AURALITH_API_KEY`). `/ingest`, `/ask`, `/chat` require it; `/health` does not.
+- `python -m auralith.registry create-key alice` prints a raw key once plus an `alice:<sha256>` entry. Put entries in `.env` as `AURALITH_API_KEYS=alice:<hash>,bob:<hash>`; clients send `X-API-Key: <raw key>` (UI: sidebar field or `AURALITH_API_KEY`). `/ingest`, `/ask`, `/chat`, `/documents` require it; `/health` does not.
 - Documents and chat threads are per user: another user's `doc_id` is a 404, and thread ids are namespaced by user.
 - Auth fails open: if `AURALITH_API_KEYS` is unset, auth is off. Check `/health` for `"auth": true`.
 - Adding or revoking keys needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
@@ -196,6 +196,7 @@ PowerShell shown; use `curl.exe`, not the `curl` alias.
 6. `docker compose restart api`; `/ask` again with no upload: it still answers.
 7. Bob's `/ask` on alice's `doc_id` returns 404; no key returns 401.
 8. Bob's `/chat` on `t1` does not know pineapple; alice's does.
+9. `GET /documents` lists only your docs; `DELETE /documents/<id>` removes the doc and its vectors (204; 404 for someone else's). The PDF page lets you pick or delete a stored doc without re-uploading.
 
 `AURALITH_API_KEY` in the UI container is shown to every browser that opens the UI: use it for dev or single-user setups only; otherwise leave it unset and type the key in the sidebar.
 

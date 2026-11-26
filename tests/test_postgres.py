@@ -233,3 +233,25 @@ def test_concurrent_ingest_same_doc(monkeypatch, sample_docs, pg_url):
         ).delete_collection()
         with _pg_engine(s.database_url).begin() as c:
             c.execute(text("DELETE FROM auralith_docs WHERE doc_id = :d"), {"d": doc_id})
+
+
+def test_delete_doc_drops_vectors_and_stale_cache(monkeypatch, sample_docs, pg_url):
+    from auralith import api
+    from auralith.config import PRODUCTION_CONFIG
+    from auralith.index import collection_name, load_pg_chunks
+    from tests.test_api import FakeChatModel
+
+    monkeypatch.delenv("AURALITH_API_KEYS", raising=False)
+    client = _api_client(monkeypatch, sample_docs, FakeChatModel("ok [1]"))
+    pdf = b"%PDF-1.4 " + uuid.uuid4().hex.encode()
+    doc_id = client.post(
+        "/ingest", files={"file": ("a.pdf", pdf, "application/pdf")}
+    ).json()["doc_id"]
+    assert doc_id in [d["doc_id"] for d in client.get("/documents").json()]
+    stale = dict(api._CACHE)  # another worker's cache still holding the doc
+    assert client.delete(f"/documents/{doc_id}").status_code == 204
+    api._CACHE.update(stale)
+    assert client.post("/ask", json={"doc_id": doc_id, "question": "q"}).status_code == 404
+    coll = collection_name(doc_id, PRODUCTION_CONFIG)
+    assert load_pg_chunks(coll, Settings.from_env()) == []
+    assert doc_id not in [d["doc_id"] for d in client.get("/documents").json()]
