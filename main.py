@@ -20,6 +20,8 @@ app runs, without a browser.
 
 from __future__ import annotations
 
+import os
+
 import streamlit as st
 
 from auralith.config import Settings
@@ -67,6 +69,9 @@ def landing_page() -> None:
 def main() -> None:
     st.set_page_config(page_title="Auralith", page_icon="A", layout="centered")
     st.session_state.setdefault("module", "Home")
+    st.session_state.api_key = st.sidebar.text_input(
+        "API key", value=os.getenv("AURALITH_API_KEY", ""), type="password"
+    )
 
     current = st.session_state.module
     if current == "Home":

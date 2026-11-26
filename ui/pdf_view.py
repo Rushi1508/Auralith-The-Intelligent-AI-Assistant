@@ -36,6 +36,11 @@ _DOWN = (
 )
 
 
+def _headers() -> dict:
+    key = st.session_state.get("api_key")
+    return {"X-API-Key": key} if key else {}
+
+
 def _detail(resp: httpx.Response) -> str:
     try:
         return str(resp.json()["detail"])
@@ -58,6 +63,7 @@ def start_pdf_module() -> None:
             resp = httpx.post(
                 f"{API_URL}/ingest",
                 files={"file": (uploaded.name, file_bytes, "application/pdf")},
+                headers=_headers(),
                 timeout=None,
             )
         except httpx.TransportError:
@@ -89,6 +95,7 @@ def start_pdf_module() -> None:
                 "POST",
                 f"{API_URL}/ask",
                 json={"doc_id": info["doc_id"], "question": question},
+                headers=_headers(),
                 timeout=None,
             ) as r:
                 if r.status_code >= 400:

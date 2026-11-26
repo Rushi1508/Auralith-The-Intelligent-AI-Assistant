@@ -17,17 +17,24 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 import psycopg
 from pydantic import BaseModel, Field
 
 from auralith.config import PRODUCTION_CONFIG, Settings
 from auralith.graph.build import run_graph, summarise
-from auralith.index import build_index, load_chunks_for_bm25
+from auralith.index import (
+    build_index,
+    collection_name,
+    load_chunks_for_bm25,
+    load_pg_chunks,
+    open_pgvector,
+)
 from auralith.ingest import load_pdf
 from auralith.providers import ProviderError, check_backend
 from auralith.rag import answer_question
+from auralith.registry import ensure_schema, get_doc, load_keys, save_doc, user_for_key
 from auralith.retrievers import build_retriever, build_sparse_retriever
 
 app = FastAPI(title="Auralith")
@@ -37,9 +44,12 @@ MAX_QUESTION_CHARS = int(os.getenv("AURALITH_MAX_QUESTION_CHARS", "2000"))
 MAX_INFLIGHT = int(os.getenv("AURALITH_MAX_INFLIGHT", "4"))
 _SLOTS = threading.BoundedSemaphore(MAX_INFLIGHT)
 
-# shortcut: in-memory registry, lost on restart; vectors persist (Chroma/pgvector) so
-# re-ingest is a cache hit, but the registry itself moves to Postgres in a later phase
+# Dev mode only (no DATABASE_URL): in-memory registry, lost on restart. With a
+# database the registry is the auralith_docs table and _CACHE holds built retrievers.
 DOCS: dict[str, dict] = {}
+# shortcut: per-process cache, each worker rebuilds once per doc
+_CACHE: dict[tuple[str, str], dict] = {}
+_CACHE_MAX = 32
 # Degradations seen at request time, surfaced by /health.
 DEGRADED: dict[str, str] = {}
 
@@ -56,8 +66,8 @@ class ChatRequest(BaseModel):
 
 @contextmanager
 def _slot() -> Iterator[None]:
-    # shortcut: per-process cap, fine for the single uvicorn worker the Dockerfile
-    # runs; use a shared limiter if workers > 1
+    # shortcut: per-worker cap (DEGRADED is per worker too), so the effective cap is
+    # WEB_CONCURRENCY x AURALITH_MAX_INFLIGHT; use a shared limiter if that matters
     if not _SLOTS.acquire(blocking=False):
         raise HTTPException(
             503, "Server busy; retry shortly.", headers={"Retry-After": "5"}
@@ -66,6 +76,76 @@ def _slot() -> Iterator[None]:
         yield
     finally:
         _SLOTS.release()
+
+
+def current_user(x_api_key: Annotated[str | None, Header()] = None) -> str:
+    """API-key owner; "" (auth off) when AURALITH_API_KEYS is unset."""
+    try:
+        keys = load_keys()
+        user = user_for_key(x_api_key) if keys and x_api_key else None
+    except ValueError as exc:  # fail closed, never auth-off
+        raise HTTPException(503, "auth misconfigured") from exc
+    if not keys:
+        return ""
+    if user is None:
+        raise HTTPException(
+            401, "Invalid or missing API key.", headers={"WWW-Authenticate": "ApiKey"}
+        )
+    return user
+
+
+def _cache_put(owner: str, doc_id: str, entry: dict) -> None:
+    _CACHE[(owner, doc_id)] = entry
+    while len(_CACHE) > _CACHE_MAX:
+        _CACHE.pop(next(iter(_CACHE)), None)
+
+
+def _get_doc(doc_id: str, owner: str, settings: Settings) -> dict | None:
+    if not settings.database_url:
+        doc = DOCS.get(doc_id)
+        return doc if doc and doc["info"].get("owner", "") == owner else None
+    if hit := _CACHE.get((owner, doc_id)):
+        return hit
+    try:
+        ensure_schema(settings.database_url)
+        info = get_doc(settings.database_url, owner, doc_id)
+        if info is None:
+            return None
+        coll = collection_name(doc_id, PRODUCTION_CONFIG)
+        store = open_pgvector(coll, settings)
+        chunks = load_pg_chunks(coll, settings)
+        if not chunks:  # registry row without vectors: treat as unknown
+            return None
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+    entry = {
+        "retriever": build_retriever(
+            store, PRODUCTION_CONFIG, settings,
+            bm25_chunks=chunks if PRODUCTION_CONFIG.use_bm25 else None,
+        ),
+        "sparse": build_sparse_retriever(chunks, PRODUCTION_CONFIG),
+        "info": info,
+    }
+    _cache_put(owner, doc_id, entry)
+    return entry
+
+
+@contextmanager
+def _doc_lock(settings: Settings, doc_id: str) -> Iterator[None]:
+    """Serialise concurrent ingests of one doc across threads and workers."""
+    if not settings.database_url:
+        yield
+        return
+    try:
+        conn = psycopg.connect(settings.database_url, autocommit=True)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+    with conn:
+        conn.execute("SELECT pg_advisory_lock(hashtext(%s))", (doc_id,))
+        try:
+            yield
+        finally:
+            conn.execute("SELECT pg_advisory_unlock(hashtext(%s))", (doc_id,))
 
 
 def _probe_db(url: str) -> str | None:
@@ -95,6 +175,11 @@ def health() -> dict:
     checks = dict(DEGRADED)
     if s.database_url and (err := _probe_db(s.database_url)):
         checks["database"] = err
+    try:
+        auth = bool(load_keys())
+    except ValueError:
+        auth = False
+        checks["auth"] = "AURALITH_API_KEYS malformed"
     return {
         "status": "degraded" if checks else "ok",
         "checks": checks,
@@ -102,11 +187,12 @@ def health() -> dict:
         "generator_provider": s.generator_provider,
         "generator_model": s.generator_model,
         "embedding_model": s.embedding_model,
+        "auth": auth,
     }
 
 
 @app.post("/ingest")
-def ingest(file: UploadFile) -> dict:
+def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dict:
     if (
         Path(file.filename or "").suffix.lower() != ".pdf"
         or file.content_type != "application/pdf"
@@ -118,53 +204,64 @@ def ingest(file: UploadFile) -> dict:
     if not data.startswith(b"%PDF-"):
         raise HTTPException(415, "File is not a PDF.")
 
-    doc_id = hashlib.sha256(data).hexdigest()[:12]
-    if doc_id in DOCS:
-        return DOCS[doc_id]["info"]
-
+    doc_id = hashlib.sha256(user.encode() + data).hexdigest()[:12]
     settings, config = Settings.from_env(), PRODUCTION_CONFIG
-    # The client filename is only a display label for citations, never a path.
-    name = Path(file.filename).stem
-    try:
-        with _slot(), tempfile.TemporaryDirectory() as tmp:
-            pdf_path = Path(tmp) / "upload.pdf"
-            pdf_path.write_bytes(data)
-            docs = load_pdf(pdf_path, doc_id=name)
-            index_root = Path(tempfile.gettempdir()) / "auralith_indexes" / doc_id
-            store, report = build_index(docs, config, settings, root=index_root)
-            chunks = load_chunks_for_bm25(docs, config)
-            retriever = build_retriever(
-                store, config, settings, bm25_chunks=chunks if config.use_bm25 else None
-            )
-            sparse = build_sparse_retriever(chunks, config)
-    except HTTPException:
-        raise
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(422, f"{type(exc).__name__}: {exc}") from exc
+    with _doc_lock(settings, doc_id):
+        if existing := _get_doc(doc_id, user, settings):
+            return existing["info"]
+        # The client filename is only a display label for citations, never a path.
+        name = Path(file.filename).stem
+        try:
+            with _slot(), tempfile.TemporaryDirectory() as tmp:
+                pdf_path = Path(tmp) / "upload.pdf"
+                pdf_path.write_bytes(data)
+                docs = load_pdf(pdf_path, doc_id=name)
+                index_root = Path(tempfile.gettempdir()) / "auralith_indexes" / doc_id
+                store, report = build_index(docs, config, settings, root=index_root)
+                chunks = load_chunks_for_bm25(docs, config)
+                retriever = build_retriever(
+                    store, config, settings, bm25_chunks=chunks if config.use_bm25 else None
+                )
+                sparse = build_sparse_retriever(chunks, config)
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(422, f"{type(exc).__name__}: {exc}") from exc
 
-    info = {
-        "doc_id": doc_id,
-        "filename": name,
-        "n_pages": len(docs),
-        "n_chunks": report.n_chunks,
-        "from_cache": report.from_cache,
-        "build_seconds": report.build_seconds,
-        "k": config.k,
-        "config": config.describe(),
-    }
-    DOCS[doc_id] = {"retriever": retriever, "sparse": sparse, "info": info}
-    return info
+        info = {
+            "doc_id": doc_id,
+            "filename": name,
+            "n_pages": len(docs),
+            "n_chunks": report.n_chunks,
+            "from_cache": report.from_cache,
+            "build_seconds": report.build_seconds,
+            "k": config.k,
+            "config": config.describe(),
+            "owner": user,
+        }
+        entry = {"retriever": retriever, "sparse": sparse, "info": info}
+        if settings.database_url:
+            try:
+                save_doc(settings.database_url, user, info)
+            except Exception as exc:  # noqa: BLE001
+                raise HTTPException(503, "Database unavailable") from exc
+            _cache_put(user, doc_id, entry)
+        else:
+            DOCS[doc_id] = entry
+        return info
 
 
 @app.post("/ask")
-def ask(body: AskRequest) -> StreamingResponse:
-    if body.doc_id not in DOCS:
+def ask(
+    body: AskRequest, user: Annotated[str, Depends(current_user)]
+) -> StreamingResponse:
+    settings = Settings.from_env()
+    doc = _get_doc(body.doc_id, user, settings)
+    if doc is None:
         raise HTTPException(404, "Unknown doc_id; ingest the PDF first.")
     if not body.question.strip():
         raise HTTPException(422, "Question is empty.")
-    settings = Settings.from_env()
     _check_backend(settings)
-    doc = DOCS[body.doc_id]
     with _slot():
         r = answer_question(
             body.question, doc["retriever"], PRODUCTION_CONFIG, settings,
@@ -196,11 +293,12 @@ def ask(body: AskRequest) -> StreamingResponse:
 
 
 @app.post("/chat")
-def chat(body: ChatRequest) -> dict:
+def chat(body: ChatRequest, user: Annotated[str, Depends(current_user)]) -> dict:
     settings = Settings.from_env()
     _check_backend(settings)
+    tid = f"{user}:{body.thread_id}" if user and body.thread_id else body.thread_id
     with _slot():
-        state = run_graph(body.query, settings, thread_id=body.thread_id)
+        state = run_graph(body.query, settings, thread_id=tid)
     return {
         **summarise(state),
         "thread_id": body.thread_id,

@@ -82,8 +82,16 @@ def build_graph(settings: Settings, compile_graph: bool = True, checkpointer=Non
 def _pg_setup(url: str) -> None:
     from langgraph.checkpoint.postgres import PostgresSaver
 
-    with PostgresSaver.from_conn_string(url) as saver:
-        saver.setup()
+    import psycopg
+
+    # Serialise setup across workers; concurrent migrations can collide.
+    with psycopg.connect(url, autocommit=True) as lock:
+        lock.execute("SELECT pg_advisory_lock(4243)")
+        try:
+            with PostgresSaver.from_conn_string(url) as saver:
+                saver.setup()
+        finally:
+            lock.execute("SELECT pg_advisory_unlock(4243)")
 
 
 def _invoke(app, query: str, config: dict[str, Any]) -> AgentState:

@@ -20,6 +20,7 @@ from __future__ import annotations
 import functools
 import logging
 import shutil
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,22 +56,51 @@ def _pg_engine(url: str):
     return sqlalchemy.create_engine(url, pool_pre_ping=True)
 
 
-def _build_pgvector(docs, config, settings, root, force, embeddings):
+def collection_name(root_name: str, config) -> str:
+    return f"{root_name}__{config.index_key}"
+
+
+_PG_LOCK = threading.Lock()  # PGVector() registers tables on shared MetaData; not thread-safe
+
+
+def open_pgvector(collection, settings, embeddings=None, pre_delete=False):
     from langchain_postgres import PGVector
 
+    embeddings = embeddings or get_embeddings(settings)
+    with _PG_LOCK:
+        return PGVector(
+            embeddings=embeddings,
+            collection_name=collection,
+            connection=_pg_engine(settings.database_url),
+            use_jsonb=True,
+            pre_delete_collection=pre_delete,
+        )
+
+
+def load_pg_chunks(collection: str, settings) -> list[Document]:
+    """Stored chunks of a collection, for rebuilding BM25 without the PDF."""
+    from sqlalchemy import text
+
+    with _pg_engine(settings.database_url).connect() as c:
+        rows = c.execute(
+            text(
+                "SELECT e.document, e.cmetadata FROM langchain_pg_embedding e "
+                "JOIN langchain_pg_collection c ON e.collection_id = c.uuid "
+                "WHERE c.name = :n ORDER BY e.id"
+            ),
+            {"n": collection},
+        ).all()
+    return [Document(page_content=d, metadata=m or {}) for d, m in rows]
+
+
+def _build_pgvector(docs, config, settings, root, force, embeddings):
     # root namespaces per-upload indexes, as it does for the Chroma directory.
-    collection = f"{root.name}__{config.index_key}"
+    collection = collection_name(root.name, config)
     chunks = chunk_documents(docs, config)
     # The embedding id is a primary key shared across collections; chunk_id
     # metadata stays unchanged.
     ids = [f"{collection}:{c.metadata['chunk_id']}" for c in chunks]
-    store = PGVector(
-        embeddings=embeddings,
-        collection_name=collection,
-        connection=_pg_engine(settings.database_url),
-        use_jsonb=True,
-        pre_delete_collection=force,
-    )
+    store = open_pgvector(collection, settings, embeddings, force)
     if ids and len(store.get_by_ids(ids)) == len(ids):
         log.info("Reusing pgvector collection %s (%d chunks)", collection, len(ids))
         return store, IndexBuildReport(config.index_key, len(ids), 0.0, True, {})

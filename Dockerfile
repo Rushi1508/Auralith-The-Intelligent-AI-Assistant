@@ -7,5 +7,7 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
  && pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE 8000 8501
-# One worker only: uploaded documents (DOCS) are held in process memory
+# Workers are stateless (registry + vectors in Postgres); each loads its own models,
+# so budget memory for 2-4 workers. uvicorn reads WEB_CONCURRENCY.
+ENV WEB_CONCURRENCY=2
 CMD ["uvicorn", "auralith.api:app", "--host", "0.0.0.0", "--port", "8000"]

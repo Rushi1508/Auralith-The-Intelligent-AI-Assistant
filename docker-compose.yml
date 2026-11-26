@@ -5,6 +5,7 @@ services:
     env_file: .env
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      WEB_CONCURRENCY: ${AURALITH_WORKERS:-2}
       DATABASE_URL: postgresql://auralith:${POSTGRES_PASSWORD:-auralith}@postgres:5432/auralith
     ports:
       - "8000:8000"

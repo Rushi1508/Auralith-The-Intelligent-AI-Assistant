@@ -41,7 +41,10 @@ class FakeRetriever:
 
 @pytest.fixture(autouse=True)
 def client(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("AURALITH_API_KEYS", raising=False)
     api.DOCS.clear()
+    api._CACHE.clear()
     api.DEGRADED.clear()
     monkeypatch.setattr("auralith.api._probe_db", lambda url: None)
     monkeypatch.setattr("auralith.api.check_backend", lambda s: None)
@@ -201,3 +204,76 @@ def test_busy_returns_503(client, monkeypatch):
     monkeypatch.setattr("auralith.api._SLOTS", sem)
     r = client.post("/chat", json={"query": "hi"})
     assert r.status_code == 503 and r.headers["Retry-After"] == "5"
+
+
+def _keys(monkeypatch):
+    from auralith.registry import hash_key
+
+    monkeypatch.setenv(
+        "AURALITH_API_KEYS", f"alice:{hash_key('ka')},bob:{hash_key('kb')}"
+    )
+    return {"X-API-Key": "ka"}, {"X-API-Key": "kb"}
+
+
+def test_auth_required_except_health(client, monkeypatch):
+    _keys(monkeypatch)
+    pdf = {"file": ("a.pdf", PDF, "application/pdf")}
+    for hdrs in ({}, {"X-API-Key": "wrong"}):
+        assert client.post("/ingest", files=pdf, headers=hdrs).status_code == 401
+        body = {"doc_id": "x", "question": "q"}
+        assert client.post("/ask", json=body, headers=hdrs).status_code == 401
+        assert client.post("/chat", json={"query": "hi"}, headers=hdrs).status_code == 401
+    r = client.get("/health")
+    assert r.status_code == 200 and r.json()["auth"] is True
+
+
+def test_other_users_doc_404(client, monkeypatch, sample_docs):
+    a, b = _keys(monkeypatch)
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: sample_docs)
+    report = IndexBuildReport("k", 7, 0.1, False, {})
+    monkeypatch.setattr("auralith.api.build_index", lambda *a, **k: (object(), report))
+    monkeypatch.setattr(
+        "auralith.api.build_retriever", lambda *a, **k: FakeRetriever(sample_docs)
+    )
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: FakeChatModel("ok [1]"))
+    up = {"file": ("a.pdf", PDF, "application/pdf")}
+    id_a = client.post("/ingest", files=up, headers=a).json()["doc_id"]
+    id_b = client.post("/ingest", files=up, headers=b).json()["doc_id"]
+    assert id_a != id_b
+    body = {"doc_id": id_a, "question": "layers?"}
+    assert client.post("/ask", json=body, headers=a).status_code == 200
+    assert client.post("/ask", json=body, headers=b).status_code == 404
+
+
+def test_chat_thread_namespaced(client, monkeypatch):
+    a, _ = _keys(monkeypatch)
+    seen = []
+
+    def spy(query, settings, thread_id=None, **_):
+        seen.append(thread_id)
+        return {"answer": "x", "route": "Converse"}
+
+    monkeypatch.setattr("auralith.api.run_graph", spy)
+    r = client.post("/chat", json={"query": "hi", "thread_id": "t1"}, headers=a)
+    assert r.status_code == 200 and r.json()["thread_id"] == "t1"
+    assert seen == ["alice:t1"]
+
+
+def test_load_keys_rejects_malformed(monkeypatch):
+    from auralith.registry import load_keys
+
+    for bad in ("alice", "Alice:" + "a" * 64, "alice:abc", "a b:" + "a" * 64):
+        monkeypatch.setenv("AURALITH_API_KEYS", bad)
+        with pytest.raises(ValueError):
+            load_keys()
+
+
+def test_malformed_keys_fail_closed(client, monkeypatch):
+    monkeypatch.setenv("AURALITH_API_KEYS", "garbage")
+    r = client.get("/health")
+    assert r.status_code == 200 and r.json()["checks"]["auth"]
+    assert r.json()["status"] == "degraded"
+    pdf = {"file": ("a.pdf", PDF, "application/pdf")}
+    assert client.post("/ingest", files=pdf).status_code == 503
+    assert client.post("/ask", json={"doc_id": "x", "question": "q"}).status_code == 503
+    assert client.post("/chat", json={"query": "hi"}).status_code == 503

@@ -170,11 +170,38 @@ docker compose --profile ollama up --build
 docker compose exec ollama ollama pull llama3.2:3b
 ```
 
-The embedding and reranker models download once into the `hf` volume; vectors and chat state live in the `postgres` service (pgvector), in the `pgdata` volume. After a restart, re-upload the PDF (the vectors are reused; the upload registry is in memory).
+The embedding and reranker models download once into the `hf` volume; vectors, the upload registry and chat state live in the `postgres` service (pgvector), in the `pgdata` volume, so documents survive an API restart and any worker can serve any request.
+
+### Auth and workers
+
+- `python -m auralith.registry create-key alice` prints a raw key once plus an `alice:<sha256>` entry. Put entries in `.env` as `AURALITH_API_KEYS=alice:<hash>,bob:<hash>`; clients send `X-API-Key: <raw key>` (UI: sidebar field or `AURALITH_API_KEY`). `/ingest`, `/ask`, `/chat` require it; `/health` does not.
+- Documents and chat threads are per user: another user's `doc_id` is a 404, and thread ids are namespaced by user.
+- Auth fails open: if `AURALITH_API_KEYS` is unset, auth is off. Check `/health` for `"auth": true`.
+- Adding or revoking keys needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
+- `AURALITH_WORKERS` (default 2) sets uvicorn workers; each loads its own models. The in-flight cap and the degraded flag in `/health` are per worker, so the effective cap is workers x `AURALITH_MAX_INFLIGHT`.
+
+### End-to-end check
+
+PowerShell shown; use `curl.exe`, not the `curl` alias.
+
+1. `docker compose up -d --build`
+2. `docker compose exec api python -m auralith.registry create-key alice` (and `bob`); put both `user:<hash>` entries in `.env` as `AURALITH_API_KEYS`.
+3. `docker compose up -d api ui`; `curl.exe localhost:8000/health` shows `"auth": true`.
+4. Ingest with alice's key, then ask with the returned `doc_id`:
+   ```powershell
+   curl.exe -H "X-API-Key: <alice key>" -F "file=@x.pdf;type=application/pdf" http://localhost:8000/ingest
+   Invoke-RestMethod -Method Post http://localhost:8000/ask -Headers @{"X-API-Key"="<alice key>"} -ContentType application/json -Body '{"doc_id":"<id>","question":"What is this about?"}'
+   ```
+5. Chat as alice: `Invoke-RestMethod -Method Post http://localhost:8000/chat -Headers @{"X-API-Key"="<alice key>"} -ContentType application/json -Body '{"query":"remember pineapple","thread_id":"t1"}'`
+6. `docker compose restart api`; `/ask` again with no upload: it still answers.
+7. Bob's `/ask` on alice's `doc_id` returns 404; no key returns 401.
+8. Bob's `/chat` on `t1` does not know pineapple; alice's does.
+
+`AURALITH_API_KEY` in the UI container is shown to every browser that opens the UI: use it for dev or single-user setups only; otherwise leave it unset and type the key in the sidebar.
 
 ## Limits and degraded mode
 
-- Caps: uploads over `AURALITH_MAX_UPLOAD_MB` (25) return 413; questions/queries over `AURALITH_MAX_QUESTION_CHARS` (2000) return 422; more than `AURALITH_MAX_INFLIGHT` (4) concurrent ingest/ask/chat requests return 503 with `Retry-After`.
+- Caps: uploads over `AURALITH_MAX_UPLOAD_MB` (25) return 413; questions/queries over `AURALITH_MAX_QUESTION_CHARS` (2000) return 422; more than `AURALITH_MAX_INFLIGHT` (4, per worker) concurrent ingest/ask/chat requests return 503 with `Retry-After`.
 - If vector retrieval fails (e.g. Postgres down), `/ask` falls back to BM25 over the same chunks and flags the answer as degraded.
 - `/health` always returns 200; `status` is `degraded` and `checks` lists what is wrong (database unreachable, last retrieval fell back).
 - `PGCONNECT_TIMEOUT` (default 5s) bounds how long a dead database can stall a request.

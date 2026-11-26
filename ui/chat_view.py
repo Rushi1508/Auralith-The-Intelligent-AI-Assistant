@@ -90,6 +90,11 @@ def start_chat_module() -> None:
             resp = httpx.post(
                 f"{API_URL}/chat",
                 json={"query": prompt, "thread_id": st.session_state.thread_id},
+                headers=(
+                    {"X-API-Key": st.session_state.api_key}
+                    if st.session_state.get("api_key")
+                    else {}
+                ),
                 timeout=None,
             )
         except httpx.TransportError:
