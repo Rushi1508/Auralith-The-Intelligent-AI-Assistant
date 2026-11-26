@@ -39,6 +39,7 @@ from auralith.ingest import load_pdf
 from auralith.providers import ProviderError, check_backend
 from auralith.rag import answer_question
 from auralith.registry import (
+    count_usage,
     delete_doc,
     ensure_schema,
     get_doc,
@@ -62,6 +63,17 @@ MAX_UPLOAD_BYTES = int(os.getenv("AURALITH_MAX_UPLOAD_MB", "25")) * 1024 * 1024
 MAX_QUESTION_CHARS = int(os.getenv("AURALITH_MAX_QUESTION_CHARS", "2000"))
 MAX_INFLIGHT = int(os.getenv("AURALITH_MAX_INFLIGHT", "4"))
 _SLOTS = threading.BoundedSemaphore(MAX_INFLIGHT)
+# Per-user quotas, shared across workers via Postgres: bucket -> [(limit, window_seconds)]; 0 = off.
+LIMITS = {
+    "llm": [
+        (int(os.getenv("AURALITH_LLM_PER_MIN", "10")), 60),
+        (int(os.getenv("AURALITH_LLM_PER_DAY", "300")), 86400),
+    ],
+    "ingest": [(int(os.getenv("AURALITH_INGEST_PER_DAY", "30")), 86400)],
+}
+# shortcut: dev-mode (no DATABASE_URL) counters are per process and never pruned
+_USAGE: dict[tuple[str, str, int], int] = {}
+_USAGE_LOCK = threading.Lock()
 
 # Dev mode only (no DATABASE_URL): in-memory registry, lost on restart. With a
 # database the registry is the auralith_docs table and _CACHE holds built retrievers.
@@ -138,6 +150,35 @@ def current_user(
         )
     request.state.user = user
     return user
+
+
+def _rate_limit(settings: Settings, user: str, bucket: str) -> None:
+    """429 once the caller passes any of the bucket's limits in the current window."""
+    rules = [(lim, sec) for lim, sec in LIMITS[bucket] if lim > 0]
+    if not rules:
+        return
+    now = time.time()
+    windows = [(f"{bucket}:{sec}", sec) for _, sec in rules]
+    try:
+        if settings.database_url:
+            counts = count_usage(settings.database_url, user, windows, now)
+        else:
+            with _USAGE_LOCK:
+                counts = []
+                for key, sec in windows:
+                    k = (user, key, int(now // sec))
+                    _USAGE[k] = _USAGE.get(k, 0) + 1
+                    counts.append(_USAGE[k])
+    except Exception:  # noqa: BLE001  # a limiter outage must not take the API down
+        log.warning("rate limiter unavailable; allowing request", exc_info=True)
+        return
+    for (lim, sec), n in zip(rules, counts):
+        if n > lim:
+            raise HTTPException(
+                429,
+                f"Rate limit reached: {lim} {bucket} requests per {sec}s.",
+                headers={"Retry-After": str(int(sec - now % sec) + 1)},
+            )
 
 
 def _cache_put(owner: str, doc_id: str, entry: dict) -> None:
@@ -254,6 +295,7 @@ def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dic
 
     doc_id = hashlib.sha256(user.encode() + data).hexdigest()[:12]
     settings, config = Settings.from_env(), PRODUCTION_CONFIG
+    _rate_limit(settings, user, "ingest")
     with _doc_lock(settings, doc_id):
         if existing := _get_doc(doc_id, user, settings):
             return existing["info"]
@@ -346,6 +388,7 @@ def ask(
         raise HTTPException(404, "Unknown doc_id; ingest the PDF first.")
     if not body.question.strip():
         raise HTTPException(422, "Question is empty.")
+    _rate_limit(settings, user, "llm")
     _check_backend(settings)
     with _slot():
         r = answer_question(
@@ -380,6 +423,7 @@ def ask(
 @app.post("/chat")
 def chat(body: ChatRequest, user: Annotated[str, Depends(current_user)]) -> dict:
     settings = Settings.from_env()
+    _rate_limit(settings, user, "llm")
     _check_backend(settings)
     tid = f"{user}:{body.thread_id}" if user and body.thread_id else body.thread_id
     with _slot():

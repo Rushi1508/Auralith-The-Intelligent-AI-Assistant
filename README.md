@@ -177,6 +177,7 @@ The embedding and reranker models download once into the `hf` volume; vectors, t
 - `python -m auralith.registry create-key alice` prints a raw key once plus an `alice:<sha256>` entry. Put entries in `.env` as `AURALITH_API_KEYS=alice:<hash>,bob:<hash>`; clients send `X-API-Key: <raw key>` (UI: sidebar field or `AURALITH_API_KEY`). `/ingest`, `/ask`, `/chat`, `/documents` require it; `/health` does not.
 - Documents and chat threads are per user: another user's `doc_id` is a 404, and thread ids are namespaced by user.
 - Auth fails open: if `AURALITH_API_KEYS` is unset, auth is off. Check `/health` for `"auth": true`.
+- Per-user quotas: `/ask` + `/chat` share `AURALITH_LLM_PER_MIN` (10) and `AURALITH_LLM_PER_DAY` (300); `/ingest` has `AURALITH_INGEST_PER_DAY` (30). Counted in Postgres, so they hold across workers; over the limit returns 429 with `Retry-After`. `0` turns a limit off. This keeps one user from using up a shared free Gemini quota.
 - Adding or revoking keys needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
 - `AURALITH_WORKERS` (default 2) sets uvicorn workers; each loads its own models. The in-flight cap and the degraded flag in `/health` are per worker, so the effective cap is workers x `AURALITH_MAX_INFLIGHT`.
 

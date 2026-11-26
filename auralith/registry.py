@@ -54,6 +54,13 @@ def ensure_schema(url: str) -> None:
                 "PRIMARY KEY (owner, doc_id))"
             )
         )
+        c.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS auralith_usage ("
+                "owner text NOT NULL, bucket text NOT NULL, win bigint NOT NULL, "
+                "n integer NOT NULL, PRIMARY KEY (owner, bucket, win))"
+            )
+        )
 
 
 def save_doc(url: str, owner: str, info: dict) -> None:
@@ -85,6 +92,29 @@ def list_docs(url: str, owner: str) -> list[dict]:
             {"o": owner},
         ).all()
     return [r[0] for r in rows]
+
+
+def count_usage(url: str, owner: str, windows: list[tuple[str, int]], now: float) -> list[int]:
+    """Count one event in each (bucket, window_seconds) fixed window; returns counts incl. this one."""
+    ensure_schema(url)
+    out = []
+    with _pg_engine(url).begin() as c:
+        for bucket, seconds in windows:
+            p = {"o": owner, "b": bucket, "w": int(now // seconds)}
+            c.execute(
+                text("DELETE FROM auralith_usage WHERE owner = :o AND bucket = :b AND win < :w"), p
+            )
+            out.append(
+                c.execute(
+                    text(
+                        "INSERT INTO auralith_usage (owner, bucket, win, n) VALUES (:o, :b, :w, 1) "
+                        "ON CONFLICT (owner, bucket, win) DO UPDATE SET n = auralith_usage.n + 1 "
+                        "RETURNING n"
+                    ),
+                    p,
+                ).scalar_one()
+            )
+    return out
 
 
 def delete_doc(url: str, owner: str, doc_id: str, collection: str) -> bool:

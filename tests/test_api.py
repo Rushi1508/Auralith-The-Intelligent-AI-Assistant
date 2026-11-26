@@ -46,6 +46,7 @@ def client(monkeypatch):
     api.DOCS.clear()
     api._CACHE.clear()
     api.DEGRADED.clear()
+    api._USAGE.clear()
     monkeypatch.setattr("auralith.api._probe_db", lambda url: None)
     monkeypatch.setattr("auralith.api.check_backend", lambda s: None)
     return TestClient(api.app)
@@ -330,3 +331,27 @@ def test_unhandled_error_500_with_request_id(monkeypatch):
     r = c.post("/chat", json={"query": "hi"}, headers={"X-Request-ID": "r2"})
     assert r.status_code == 500 and r.json()["request_id"] == "r2"
     assert r.headers["X-Request-ID"] == "r2"
+
+
+def test_rate_limit_per_user_429(client, monkeypatch):
+    a, b = _keys(monkeypatch)
+    monkeypatch.setitem(api.LIMITS, "llm", [(2, 60), (0, 86400)])
+    monkeypatch.setattr(
+        "auralith.api.run_graph", lambda q, s, thread_id=None: {"route": "converse"}
+    )
+    monkeypatch.setattr("auralith.api.summarise", lambda st: {})
+    for _ in range(2):
+        assert client.post("/chat", json={"query": "hi"}, headers=a).status_code == 200
+    r = client.post("/chat", json={"query": "hi"}, headers=a)
+    assert r.status_code == 429 and 1 <= int(r.headers["Retry-After"]) <= 61
+    assert client.post("/chat", json={"query": "hi"}, headers=b).status_code == 200
+
+
+def test_rate_limiter_outage_fails_open(client, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+
+    def down(*a, **k):
+        raise OSError("db down")
+
+    monkeypatch.setattr("auralith.api.count_usage", down)
+    api._rate_limit(Settings.from_env(), "alice", "llm")  # no raise

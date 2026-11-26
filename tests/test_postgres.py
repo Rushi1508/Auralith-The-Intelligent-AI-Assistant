@@ -255,3 +255,23 @@ def test_delete_doc_drops_vectors_and_stale_cache(monkeypatch, sample_docs, pg_u
     coll = collection_name(doc_id, PRODUCTION_CONFIG)
     assert load_pg_chunks(coll, Settings.from_env()) == []
     assert doc_id not in [d["doc_id"] for d in client.get("/documents").json()]
+
+
+def test_usage_counts_shared_and_atomic(pg_url):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from sqlalchemy import text
+
+    from auralith.registry import count_usage
+
+    owner = "u" + uuid.uuid4().hex[:8]
+    w = [("llm:60", 60), ("llm:86400", 86400)]
+    try:
+        with ThreadPoolExecutor(8) as ex:  # 8 concurrent "workers"
+            res = list(ex.map(lambda _: count_usage(pg_url, owner, w, 1000.0), range(8)))
+        assert sorted(r[0] for r in res) == list(range(1, 9))
+        assert count_usage(pg_url, owner, w, 1060.0)[0] == 1  # next minute window resets
+        assert count_usage(pg_url, owner, w, 1060.0)[1] == 10  # day window keeps counting
+    finally:
+        with _pg_engine(pg_url).begin() as c:
+            c.execute(text("DELETE FROM auralith_usage WHERE owner = :o"), {"o": owner})
