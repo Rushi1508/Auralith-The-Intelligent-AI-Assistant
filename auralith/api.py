@@ -39,12 +39,18 @@ from auralith.ingest import load_pdf
 from auralith.providers import ProviderError, check_backend
 from auralith.rag import answer_question
 from auralith.registry import (
+    _USER,
+    admins,
     count_usage,
+    create_key,
+    db_user_for_key,
     delete_doc,
     ensure_schema,
     get_doc,
     list_docs,
+    list_keys,
     load_keys,
+    revoke_key,
     save_doc,
     user_for_key,
 )
@@ -88,6 +94,10 @@ DEGRADED: dict[str, str] = {}
 class AskRequest(BaseModel):
     doc_id: str
     question: Annotated[str, Field(max_length=MAX_QUESTION_CHARS)]
+
+
+class KeyRequest(BaseModel):
+    user: Annotated[str, Field(pattern=_USER.pattern)]
 
 
 class ChatRequest(BaseModel):
@@ -144,6 +154,12 @@ def current_user(
         raise HTTPException(503, "auth misconfigured") from exc
     if not keys:
         return ""
+    if user is None and x_api_key:
+        url = Settings.from_env().database_url
+        try:
+            user = db_user_for_key(url, x_api_key) if url else None
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(503, "Database unavailable") from exc
     if user is None:
         raise HTTPException(
             401, "Invalid or missing API key.", headers={"WWW-Authenticate": "ApiKey"}
@@ -375,6 +391,51 @@ def delete_document(doc_id: str, user: Annotated[str, Depends(current_user)]) ->
             _CACHE.pop((user, doc_id), None)
     if not found:
         raise HTTPException(404, "Unknown doc_id.")
+    return Response(status_code=204)
+
+
+def admin_user(user: Annotated[str, Depends(current_user)]) -> str:
+    if not user or user not in admins():
+        raise HTTPException(403, "Admin only (AURALITH_ADMINS).")
+    return user
+
+
+def _admin_db() -> str:
+    url = Settings.from_env().database_url
+    if not url:
+        raise HTTPException(501, "Runtime keys need DATABASE_URL.")
+    return url
+
+
+@app.post("/admin/keys", status_code=201)
+def admin_create_key(body: KeyRequest, _: Annotated[str, Depends(admin_user)]) -> dict:
+    """Issue a key for a (new or existing) user. The raw key is shown only in this response."""
+    url = _admin_db()
+    try:
+        return create_key(url, body.user)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+
+
+@app.get("/admin/keys")
+def admin_list_keys(_: Annotated[str, Depends(admin_user)]) -> list[dict]:
+    """Runtime keys (id, user, created_at); env bootstrap keys aren't listed."""
+    url = _admin_db()
+    try:
+        return list_keys(url)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+
+
+@app.delete("/admin/keys/{key_id}", status_code=204)
+def admin_revoke_key(key_id: int, _: Annotated[str, Depends(admin_user)]) -> Response:
+    url = _admin_db()
+    try:
+        found = revoke_key(url, key_id)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+    if not found:
+        raise HTTPException(404, "Unknown key id.")
     return Response(status_code=204)
 
 

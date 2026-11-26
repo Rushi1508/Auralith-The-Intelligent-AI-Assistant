@@ -275,3 +275,25 @@ def test_usage_counts_shared_and_atomic(pg_url):
     finally:
         with _pg_engine(pg_url).begin() as c:
             c.execute(text("DELETE FROM auralith_usage WHERE owner = :o"), {"o": owner})
+
+
+def test_runtime_keys_create_use_revoke(monkeypatch, pg_url):
+    from fastapi.testclient import TestClient
+
+    from auralith import api
+    from auralith.registry import hash_key
+
+    monkeypatch.setenv("AURALITH_API_KEYS", f"alice:{hash_key('ka')},bob:{hash_key('kb')}")
+    monkeypatch.setenv("AURALITH_ADMINS", "alice")
+    client, admin = TestClient(api.app), {"X-API-Key": "ka"}
+    user = "u" + uuid.uuid4().hex[:8]
+    made = client.post("/admin/keys", json={"user": user}, headers=admin)
+    assert made.status_code == 201 and made.json()["user"] == user
+    new = {"X-API-Key": made.json()["key"]}
+    assert client.get("/documents", headers=new).status_code == 200
+    listed = client.get("/admin/keys", headers=admin).json()
+    assert any(k["id"] == made.json()["id"] and "key" not in k for k in listed)
+    assert client.get("/admin/keys", headers=new).status_code == 403
+    assert client.delete(f"/admin/keys/{made.json()['id']}", headers=admin).status_code == 204
+    assert client.get("/documents", headers=new).status_code == 401
+    assert client.delete(f"/admin/keys/{made.json()['id']}", headers=admin).status_code == 404

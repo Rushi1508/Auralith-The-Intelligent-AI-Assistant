@@ -178,7 +178,8 @@ The embedding and reranker models download once into the `hf` volume; vectors, t
 - Documents and chat threads are per user: another user's `doc_id` is a 404, and thread ids are namespaced by user.
 - Auth fails open: if `AURALITH_API_KEYS` is unset, auth is off. Check `/health` for `"auth": true`.
 - Per-user quotas: `/ask` + `/chat` share `AURALITH_LLM_PER_MIN` (10) and `AURALITH_LLM_PER_DAY` (300); `/ingest` has `AURALITH_INGEST_PER_DAY` (30). Counted in Postgres, so they hold across workers; over the limit returns 429 with `Retry-After`. `0` turns a limit off. This keeps one user from using up a shared free Gemini quota.
-- Adding or revoking keys needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
+- Env keys are the bootstrap; with `AURALITH_API_KEYS` unset auth stays off. To add users without a restart, list admins in `AURALITH_ADMINS=alice`, then an admin calls `POST /admin/keys {"user": "carol"}` (the raw key is returned once), `GET /admin/keys` to list, and `DELETE /admin/keys/<id>` to revoke. Runtime keys live in Postgres and apply to every worker immediately.
+- Changing env keys still needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
 - `AURALITH_WORKERS` (default 2) sets uvicorn workers; each loads its own models. The in-flight cap and the degraded flag in `/health` are per worker, so the effective cap is workers x `AURALITH_MAX_INFLIGHT`.
 
 ### Deploy (free)

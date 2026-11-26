@@ -61,6 +61,13 @@ def ensure_schema(url: str) -> None:
                 "n integer NOT NULL, PRIMARY KEY (owner, bucket, win))"
             )
         )
+        c.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS auralith_keys ("
+                "id bigserial PRIMARY KEY, key_hash text UNIQUE NOT NULL, owner text NOT NULL, "
+                "created_at timestamptz NOT NULL DEFAULT now())"
+            )
+        )
 
 
 def save_doc(url: str, owner: str, info: dict) -> None:
@@ -92,6 +99,49 @@ def list_docs(url: str, owner: str) -> list[dict]:
             {"o": owner},
         ).all()
     return [r[0] for r in rows]
+
+
+def admins() -> set[str]:
+    """AURALITH_ADMINS="alice,bob": users allowed to manage API keys."""
+    return {u.strip() for u in os.getenv("AURALITH_ADMINS", "").split(",") if u.strip()}
+
+
+def db_user_for_key(url: str, key: str) -> str | None:
+    ensure_schema(url)
+    with _pg_engine(url).connect() as c:
+        return c.execute(
+            text("SELECT owner FROM auralith_keys WHERE key_hash = :h"), {"h": hash_key(key)}
+        ).scalar()
+
+
+def create_key(url: str, owner: str) -> dict:
+    """New key for owner; the raw key is returned once and only its hash is stored."""
+    ensure_schema(url)
+    key = secrets.token_urlsafe(32)
+    with _pg_engine(url).begin() as c:
+        row = c.execute(
+            text(
+                "INSERT INTO auralith_keys (key_hash, owner) VALUES (:h, :o) "
+                "RETURNING id, created_at"
+            ),
+            {"h": hash_key(key), "o": owner},
+        ).one()
+    return {"id": row[0], "user": owner, "key": key, "created_at": row[1].isoformat()}
+
+
+def list_keys(url: str) -> list[dict]:
+    ensure_schema(url)
+    with _pg_engine(url).connect() as c:
+        rows = c.execute(text("SELECT id, owner, created_at FROM auralith_keys ORDER BY id")).all()
+    return [{"id": i, "user": o, "created_at": t.isoformat()} for i, o, t in rows]
+
+
+def revoke_key(url: str, key_id: int) -> bool:
+    ensure_schema(url)
+    with _pg_engine(url).begin() as c:
+        return c.execute(
+            text("DELETE FROM auralith_keys WHERE id = :i RETURNING id"), {"i": key_id}
+        ).first() is not None
 
 
 def count_usage(url: str, owner: str, windows: list[tuple[str, int]], now: float) -> list[int]:
@@ -130,7 +180,7 @@ def delete_doc(url: str, owner: str, doc_id: str, collection: str) -> bool:
     return gone is not None
 
 
-# shortcut: env key list, adding/revoking needs an api recreate; move to a table if keys must change at runtime
+# Bootstrap keys come from AURALITH_API_KEYS; more are added at runtime via /admin/keys.
 def _main() -> None:
     if len(sys.argv) != 3 or sys.argv[1] != "create-key" or not _USER.match(sys.argv[2]):
         sys.exit("usage: python -m auralith.registry create-key <user>  (user: [a-z0-9_-]{1,64})")

@@ -40,7 +40,8 @@ Edit `.env` and set:
 | `AURALITH_DOMAIN` | `<ip-with-dashes>.sslip.io`, e.g. `141-145-1-2.sslip.io` (free; no domain to buy), or your own domain with an A record for both `@` and `api` |
 | `GEMINI_API_KEY` | free key from aistudio.google.com |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
-| `AURALITH_API_KEYS` | one entry per user; see below |
+| `AURALITH_API_KEYS` | your own admin key; see below |
+| `AURALITH_ADMINS` | your user name, e.g. `alice` |
 
 ```bash
 # builds the image (10-20 min the first time), then prints a raw key and its .env entry
@@ -49,6 +50,14 @@ docker compose run --rm --no-deps api python -m auralith.registry create-key ali
 ```
 
 Put the entries in `.env`, comma-separated: `AURALITH_API_KEYS=alice:<hash>,bob:<hash>`.
+
+After startup, add everyone else at runtime (no restart). Each response shows the raw key once:
+
+```bash
+curl -s -X POST https://api.<AURALITH_DOMAIN>/admin/keys -H "X-API-Key: <alice key>" -H "Content-Type: application/json" -d '{"user":"carol"}'
+curl -s https://api.<AURALITH_DOMAIN>/admin/keys -H "X-API-Key: <alice key>"                 # list
+curl -s -X DELETE https://api.<AURALITH_DOMAIN>/admin/keys/<id> -H "X-API-Key: <alice key>"  # revoke
+```
 
 Give each person their raw key. They type it into the UI sidebar or send it as `X-API-Key`.
 
@@ -75,7 +84,7 @@ alias dc='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
 dc ps                                   # health of every service
 dc logs -f api                          # JSON access log: rid, path, status, ms, user
 git pull && dc up -d --build            # update
-dc up -d api                            # after editing .env (e.g. adding a key); restart doesn't re-read it
+dc up -d api                            # after editing .env; restart doesn't re-read it
 ```
 
 Back up nightly (run `crontab -e` and add the line below). Keep a copy off the VM too, because losing the VM loses `pgdata`:

@@ -355,3 +355,13 @@ def test_rate_limiter_outage_fails_open(client, monkeypatch):
 
     monkeypatch.setattr("auralith.api.count_usage", down)
     api._rate_limit(Settings.from_env(), "alice", "llm")  # no raise
+
+
+def test_admin_keys_access(client, monkeypatch):
+    a, b = _keys(monkeypatch)
+    monkeypatch.setenv("AURALITH_ADMINS", "alice")
+    body = {"user": "carol"}
+    assert client.post("/admin/keys", json=body).status_code == 401
+    assert client.post("/admin/keys", json=body, headers=b).status_code == 403
+    assert client.post("/admin/keys", json=body, headers=a).status_code == 501  # no DB
+    assert client.post("/admin/keys", json={"user": "Bad Name"}, headers=a).status_code == 422
