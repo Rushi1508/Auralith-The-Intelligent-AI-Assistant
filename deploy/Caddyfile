@@ -1,0 +1,8 @@
+# UI at https://<domain>, API at https://api.<domain>. Caddy gets and renews the certs.
+{$AURALITH_DOMAIN} {
+	reverse_proxy ui:8501
+}
+
+api.{$AURALITH_DOMAIN} {
+	reverse_proxy api:8000
+}

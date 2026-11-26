@@ -180,6 +180,10 @@ The embedding and reranker models download once into the `hf` volume; vectors, t
 - Adding or revoking keys needs `docker compose up -d api` (a plain `restart` does not re-read `env_file`).
 - `AURALITH_WORKERS` (default 2) sets uvicorn workers; each loads its own models. The in-flight cap and the degraded flag in `/health` are per worker, so the effective cap is workers x `AURALITH_MAX_INFLIGHT`.
 
+### Deploy (free)
+
+`docker-compose.prod.yml` layers production settings on the same stack: Caddy with automatic HTTPS as the only public service, Gemini as the generator (no Ollama), restart policies, and required secrets (compose refuses to start without them). [docs/deploy-oracle.md](docs/deploy-oracle.md) walks through it on an Oracle Cloud Always Free ARM VM, with a free `sslip.io` hostname, at $0.
+
 ### Logs and tracing
 
 - Every response has an `X-Request-ID` header (sent by the client, or generated). The API logs one JSON line per request with `rid`, `method`, `path`, `status`, `ms` and `user`; unhandled errors log a traceback and return `500 {"detail": "Internal error", "request_id": ...}`. `docker compose logs -f api` to follow; `AURALITH_LOG_LEVEL` sets the level.

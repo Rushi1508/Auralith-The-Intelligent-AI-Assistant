@@ -1,0 +1,39 @@
+# Production on one VM: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Caddy (HTTPS) is the only service reachable from the internet; Gemini is the generator,
+# so no Ollama. Missing secrets stop compose instead of starting with dev defaults.
+services:
+  api:
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      AURALITH_GENERATOR_PROVIDER: gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY in .env}
+      AURALITH_API_KEYS: ${AURALITH_API_KEYS:?set AURALITH_API_KEYS in .env (auth is off without it)}
+      DATABASE_URL: postgresql://auralith:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/auralith
+
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+
+  ui:
+    ports: !reset []
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AURALITH_DOMAIN: ${AURALITH_DOMAIN:?set AURALITH_DOMAIN in .env, e.g. 1-2-3-4.sslip.io}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, ui]
+
+volumes:
+  caddy_data:
+  caddy_config:
