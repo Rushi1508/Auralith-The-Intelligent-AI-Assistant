@@ -15,6 +15,7 @@ through session state.
 from __future__ import annotations
 
 import os
+import uuid
 
 import httpx
 import streamlit as st
@@ -62,6 +63,7 @@ def start_chat_module() -> None:
     st.caption("Chat Mode - routed by a LangGraph state machine")
 
     st.session_state.setdefault("chat_prompt", "")
+    st.session_state.setdefault("thread_id", uuid.uuid4().hex)
 
     if st.button("Capture voice"):
         # Written to session state, not a local, so it survives the rerun that
@@ -85,7 +87,11 @@ def start_chat_module() -> None:
 
     with st.spinner("Routing..."):
         try:
-            resp = httpx.post(f"{API_URL}/chat", json={"query": prompt}, timeout=None)
+            resp = httpx.post(
+                f"{API_URL}/chat",
+                json={"query": prompt, "thread_id": st.session_state.thread_id},
+                timeout=None,
+            )
         except httpx.TransportError:
             st.error(
                 f"Cannot reach the Auralith API at {API_URL}. "

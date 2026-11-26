@@ -43,9 +43,13 @@ langchain-community==0.4.2
 
 # --- Agent graph ---
 langgraph==1.2.11
+langgraph-checkpoint==4.3.2
+langgraph-checkpoint-postgres==3.2.1  # DATABASE_URL: chat state in Postgres
 
 # --- Vector store and retrieval ---
 chromadb==1.5.9
+langchain-postgres==0.0.19  # DATABASE_URL: pgvector instead of Chroma
+psycopg[binary]==3.3.9
 rank-bm25==0.2.2          # BM25Retriever's scoring backend
 sentence-transformers==5.7.0   # embeddings + cross-encoder reranking
 torch==2.12.0

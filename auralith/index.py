@@ -17,6 +17,7 @@ so a 30-config sweep still only pays for a handful of embedding passes.
 
 from __future__ import annotations
 
+import functools
 import logging
 import shutil
 import time
@@ -25,6 +26,7 @@ from pathlib import Path
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
+from langchain_core.vectorstores import VectorStore
 
 from auralith.config import INDEX_DIR, RetrievalConfig, Settings
 from auralith.ingest import chunk_documents, chunk_stats
@@ -44,6 +46,43 @@ class IndexBuildReport:
     stats: dict[str, float]
 
 
+@functools.lru_cache
+def _pg_engine(url: str):
+    import sqlalchemy
+
+    # psycopg2 is not installed (psycopg 3 is); one pool per URL.
+    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return sqlalchemy.create_engine(url)
+
+
+def _build_pgvector(docs, config, settings, root, force, embeddings):
+    from langchain_postgres import PGVector
+
+    # root namespaces per-upload indexes, as it does for the Chroma directory.
+    collection = f"{root.name}__{config.index_key}"
+    chunks = chunk_documents(docs, config)
+    # The embedding id is a primary key shared across collections; chunk_id
+    # metadata stays unchanged.
+    ids = [f"{collection}:{c.metadata['chunk_id']}" for c in chunks]
+    store = PGVector(
+        embeddings=embeddings,
+        collection_name=collection,
+        connection=_pg_engine(settings.database_url),
+        use_jsonb=True,
+        pre_delete_collection=force,
+    )
+    if ids and len(store.get_by_ids(ids)) == len(ids):
+        log.info("Reusing pgvector collection %s (%d chunks)", collection, len(ids))
+        return store, IndexBuildReport(config.index_key, len(ids), 0.0, True, {})
+
+    started = time.perf_counter()
+    store.add_documents(chunks, ids=ids)
+    elapsed = time.perf_counter() - started
+    return store, IndexBuildReport(
+        config.index_key, len(chunks), round(elapsed, 2), False, chunk_stats(chunks)
+    )
+
+
 def index_path(index_key: str, root: Path = INDEX_DIR) -> Path:
     return root / index_key
 
@@ -54,7 +93,7 @@ def build_index(
     settings: Settings,
     root: Path = INDEX_DIR,
     force: bool = False,
-) -> tuple[Chroma, IndexBuildReport]:
+) -> tuple[VectorStore, IndexBuildReport]:
     """Build (or reuse) the persisted index for this config's chunking scheme.
 
     Returns the store plus a report, so callers can record whether the work was
@@ -62,6 +101,8 @@ def build_index(
     """
     path = index_path(config.index_key, root)
     embeddings = get_embeddings(settings)
+    if settings.database_url:
+        return _build_pgvector(docs, config, settings, root, force, embeddings)
 
     if force and path.exists():
         shutil.rmtree(path)

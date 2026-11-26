@@ -281,3 +281,34 @@ class TestState:
         hints = get_type_hints(AgentState, include_extras=True)
         assert hints["trace"].__metadata__[0] is _append
         assert hints["route"].__metadata__[0] is _keep_last
+
+
+# --------------------------------------------------------------------------
+# Multi-turn memory (in-memory checkpointer)
+# --------------------------------------------------------------------------
+
+class TestThreadMemory:
+    def test_second_turn_sees_history_and_starts_clean(self, monkeypatch):
+        from auralith.config import Settings
+        from auralith.graph.build import _MEMORY, run_graph
+
+        router = '{{"action": "{}", "parameters": "p"}}'
+        fake = FakeChatModel(
+            router.format("WriteCode"),
+            "```python\nprint('x')\n```",
+            router.format("Converse"),
+            "It prints x.",
+        )
+        monkeypatch.setattr("auralith.graph.nodes.get_chat_model", lambda s: fake)
+        settings = Settings(database_url=None)
+
+        t1 = run_graph("write a print", settings, thread_id="mem-1")
+        assert t1["code"] == "print('x')"
+        t2 = run_graph("what does it do", settings, thread_id="mem-1")
+
+        assert t2["code"] is None
+        assert t2["trace"] == ["route:Converse", "converse:ok"]
+        assert t2["answer"] == "It prints x."
+        assert len(t2["messages"]) == 4
+        assert "print('x')" in fake.calls[3]  # turn-1 answer reached the Converse prompt
+        assert _MEMORY.get_tuple({"configurable": {"thread_id": "mem-1"}}) is not None

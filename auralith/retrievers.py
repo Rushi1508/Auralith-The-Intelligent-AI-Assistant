@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import logging
 
-from langchain_chroma import Chroma
 from langchain_core.documents import Document
+from langchain_core.vectorstores import VectorStore
 from langchain_core.retrievers import BaseRetriever
 
 from auralith.config import RetrievalConfig, Settings
@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 def build_dense_retriever(
-    store: Chroma, config: RetrievalConfig, fetch_k: int | None = None
+    store: VectorStore, config: RetrievalConfig, fetch_k: int | None = None
 ) -> BaseRetriever:
     """Vector-similarity retriever.
 
@@ -120,7 +120,7 @@ class DecomposeRetriever(BaseRetriever):
 
 
 def build_retriever(
-    store: Chroma,
+    store: VectorStore,
     config: RetrievalConfig,
     settings: Settings,
     bm25_chunks: list[Document] | None = None,

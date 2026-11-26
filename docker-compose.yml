@@ -5,16 +5,32 @@ services:
     env_file: .env
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      DATABASE_URL: postgresql://auralith:${POSTGRES_PASSWORD:-auralith}@postgres:5432/auralith
     ports:
       - "8000:8000"
     volumes:
-      - indexes:/tmp/auralith_indexes
       - hf:/hf
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       retries: 6
       start_period: 60s
+
+  postgres:
+    image: pgvector/pgvector:pg17  # pg18 moved the data dir
+    environment:
+      POSTGRES_USER: auralith
+      POSTGRES_DB: auralith
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auralith}  # dev-only default; not published
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "auralith", "-d", "auralith"]
+      interval: 5s
+      retries: 10
 
   ui:
     image: auralith
@@ -41,6 +57,6 @@ services:
       - ollama:/root/.ollama
 
 volumes:
-  indexes:
+  pgdata:
   hf:
   ollama:

@@ -110,7 +110,8 @@ def test_chat_with_fake_graph_model(client, monkeypatch):
         "auralith.graph.nodes.get_chat_model",
         lambda s: FakeChatModel('{"action": "Converse", "parameters": "hi"}', "Hello!"),
     )
-    r = client.post("/chat", json={"query": "hi"})
+    r = client.post("/chat", json={"query": "hi", "thread_id": "t1"})
     assert r.status_code == 200
     assert r.json()["route"] == "Converse"
     assert r.json()["answer"] == "Hello!"
+    assert r.json()["thread_id"] == "t1"

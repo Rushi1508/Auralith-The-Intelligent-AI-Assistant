@@ -22,6 +22,9 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any, TypedDict
 
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
+
 
 class Route(StrEnum):
     """The actions the router may choose.
@@ -78,6 +81,8 @@ class AgentState(TypedDict, total=False):
 
     # --- input ---
     query: str
+    messages: Annotated[list[AnyMessage], add_messages]
+    """Chat history; only carries across turns when a checkpointer is used."""
 
     # --- routing ---
     route: Annotated[str | None, _keep_last]

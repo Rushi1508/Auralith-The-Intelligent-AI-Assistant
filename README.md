@@ -123,6 +123,11 @@ uvicorn auralith.api:app --port 8000
 streamlit run main.py   # on Windows, if `streamlit` isn't found: python -m streamlit run main.py
 ```
 
+**Postgres (optional).** Set `DATABASE_URL=postgresql://user:pass@host:5432/db` (a pgvector-enabled Postgres)
+and vectors are stored with pgvector and chat memory with the LangGraph Postgres checkpointer, keyed by the
+`thread_id` the UI sends. Unset, it falls back to Chroma on disk and in-memory chat state (lost on restart).
+Docker Compose starts Postgres and sets this for you.
+
 The UI talks to the API over HTTP. `/ask` streams NDJSON (passages, then the full answer), not token-by-token. Image mode still runs locally.
 
 Set `AURALITH_PROVIDER=openai` and `OPENAI_API_KEY` to use hosted models instead.
@@ -165,7 +170,7 @@ docker compose --profile ollama up --build
 docker compose exec ollama ollama pull llama3.2:3b
 ```
 
-The embedding and reranker models download once into the `hf` volume; indexes are cached in the `indexes` volume; after a restart, re-upload the PDF (it reuses the cached index).
+The embedding and reranker models download once into the `hf` volume; vectors and chat state live in the `postgres` service (pgvector), in the `pgdata` volume. After a restart, re-upload the PDF (the vectors are reused; the upload registry is in memory).
 
 ## Limits
 

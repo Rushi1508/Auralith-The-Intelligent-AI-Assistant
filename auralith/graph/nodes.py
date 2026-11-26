@@ -15,6 +15,7 @@ import re
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
 
 from auralith.config import Settings
 from auralith.graph.state import AgentState, Route
@@ -24,6 +25,8 @@ from auralith.tools.search import search_web
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+# shortcut: last N raw messages, no summarization; upgrade when long threads matter
+HISTORY_MESSAGES = 6
 
 ROUTER_PROMPT = """You are a request router. Classify the user's request into \
 exactly one action.
@@ -43,7 +46,7 @@ Respond with ONLY a JSON object and nothing else:
 {{"action": "SearchWeb" | "WriteCode" | "Converse", "parameters": "<the search \
 query, the code request, or the user's question>"}}
 
-User request: {query}"""
+{history}User request: {query}"""
 
 CODE_PROMPT = """You are Auralith, a coding assistant. Write code for the request \
 below.
@@ -51,12 +54,12 @@ below.
 Output ONLY the code, inside a single fenced block that names the language. \
 No explanation before or after.
 
-Request: {query}"""
+{history}Request: {query}"""
 
 CONVERSE_PROMPT = """You are Auralith, a helpful assistant. Answer the user's \
 request clearly. If it is a task, give concrete step-by-step instructions.
 
-Request: {query}"""
+{history}Request: {query}"""
 
 SEARCH_SYNTHESIS_PROMPT = """Answer the user's question using the web search \
 results below. Cite sources by their number, like [1].
@@ -66,7 +69,7 @@ If the results do not answer the question, say so plainly.
 Search results:
 {results}
 
-Question: {query}
+{history}Question: {query}
 
 Answer:"""
 
@@ -84,6 +87,16 @@ def _extract_json(text: str) -> dict[str, Any] | None:
         return obj if isinstance(obj, dict) else None
     except json.JSONDecodeError:
         return None
+
+
+def _history(state: AgentState) -> str:
+    """Prior turns as prompt text; empty without a checkpointer or on turn one."""
+    prior = (state.get("messages") or [])[:-1][-HISTORY_MESSAGES:]
+    if not prior:
+        return ""
+    who = {"human": "User"}
+    lines = [f"{who.get(m.type, 'Assistant')}: {m.content}" for m in prior]
+    return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
 
 
 def _content(response: Any) -> str:
@@ -104,7 +117,8 @@ def route_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     """
     query = state["query"]
     try:
-        raw = _content(llm.invoke(ROUTER_PROMPT.format(query=query)))
+        prompt = ROUTER_PROMPT.format(history=_history(state), query=query)
+        raw = _content(llm.invoke(prompt))
     except Exception as exc:  # noqa: BLE001
         log.warning("Router call failed: %s", exc)
         return {
@@ -162,7 +176,9 @@ def search_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     try:
         answer = _content(
             llm.invoke(
-                SEARCH_SYNTHESIS_PROMPT.format(results=response.format(), query=query)
+                SEARCH_SYNTHESIS_PROMPT.format(
+                    history=_history(state), results=response.format(), query=query
+                )
             )
         )
     except Exception as exc:  # noqa: BLE001
@@ -192,7 +208,8 @@ def code_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     """
     query = state.get("parameters") or state["query"]
     try:
-        raw = _content(llm.invoke(CODE_PROMPT.format(query=query)))
+        prompt = CODE_PROMPT.format(history=_history(state), query=query)
+        raw = _content(llm.invoke(prompt))
     except Exception as exc:  # noqa: BLE001
         return {
             "error": f"Code generation failed: {type(exc).__name__}: {exc}",
@@ -217,7 +234,8 @@ def code_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
 def converse_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     query = state.get("parameters") or state["query"]
     try:
-        answer = _content(llm.invoke(CONVERSE_PROMPT.format(query=query)))
+        prompt = CONVERSE_PROMPT.format(history=_history(state), query=query)
+        answer = _content(llm.invoke(prompt))
     except Exception as exc:  # noqa: BLE001
         return {
             "error": f"Generation failed: {type(exc).__name__}: {exc}",
@@ -287,10 +305,22 @@ def recovery_decision(state: AgentState) -> str:
 def make_nodes(settings: Settings) -> dict[str, Any]:
     """Bind a model into each node so the graph builder stays declarative."""
     llm = get_chat_model(settings)
+
+    def replying(fn):
+        """Append the answer to `messages` so the next turn sees it."""
+
+        def node(s: AgentState) -> dict[str, Any]:
+            out = fn(s, llm)
+            if out.get("answer"):
+                out["messages"] = [AIMessage(out["answer"])]
+            return out
+
+        return node
+
     return {
         "route": lambda s: route_node(s, llm),
-        "search": lambda s: search_node(s, llm),
-        "code": lambda s: code_node(s, llm),
-        "converse": lambda s: converse_node(s, llm),
+        "search": replying(search_node),
+        "code": replying(code_node),
+        "converse": replying(converse_node),
         "recover": recovery_node,
     }

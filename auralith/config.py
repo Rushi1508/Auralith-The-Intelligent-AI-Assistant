@@ -51,6 +51,8 @@ class Settings:
     # embeddings and cross-encoder stay local so v2 numbers remain comparable.
     generator_provider: Literal["ollama", "gemini"] = "ollama"
     gemini_api_key: str | None = None
+    # Plain postgresql:// URL; unset keeps Chroma + the in-memory checkpointer.
+    database_url: str | None = None
     # Judge and router both need determinism for a reproducible eval.
     temperature: float = 0.0
     request_timeout: int = 120
@@ -86,6 +88,7 @@ class Settings:
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             generator_provider=os.getenv("AURALITH_GENERATOR_PROVIDER", "ollama"),  # type: ignore[arg-type]
             gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
+            database_url=os.getenv("DATABASE_URL") or None,
             temperature=float(os.getenv("AURALITH_TEMPERATURE", "0.0")),
             request_timeout=int(os.getenv("AURALITH_TIMEOUT", "120")),
             max_output_tokens=int(os.getenv("AURALITH_MAX_OUTPUT_TOKENS", "512")),

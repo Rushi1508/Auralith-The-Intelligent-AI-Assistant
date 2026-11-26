@@ -29,7 +29,8 @@ app = FastAPI(title="Auralith")
 
 MAX_UPLOAD_BYTES = int(os.getenv("AURALITH_MAX_UPLOAD_MB", "25")) * 1024 * 1024
 
-# shortcut: in-memory, lost on restart (re-ingest is cheap, Chroma index is on disk), replaced by Postgres in Phase I-3
+# shortcut: in-memory registry, lost on restart; vectors persist (Chroma/pgvector) so
+# re-ingest is a cache hit, but the registry itself moves to Postgres in I-4
 DOCS: dict[str, dict] = {}
 
 
@@ -40,6 +41,7 @@ class AskRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     query: str
+    thread_id: str | None = None
 
 
 def _check_backend(settings: Settings) -> None:
@@ -140,9 +142,10 @@ def ask(body: AskRequest) -> StreamingResponse:
 def chat(body: ChatRequest) -> dict:
     settings = Settings.from_env()
     _check_backend(settings)
-    state = run_graph(body.query, settings)
+    state = run_graph(body.query, settings, thread_id=body.thread_id)
     return {
         **summarise(state),
+        "thread_id": body.thread_id,
         "search_results": state.get("search_results") or [],
         "code": state.get("code"),
         "language": state.get("language"),
