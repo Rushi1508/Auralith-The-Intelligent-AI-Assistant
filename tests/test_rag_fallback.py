@@ -51,3 +51,15 @@ def test_passages_carry_reading_order():
     text = format_passages([chunks[-1], chunks[0]])  # relevance order != reading order
     assert f"page 1, part {len(chunks)})" in text and "page 1, part 1)" in text
     assert "(source: x, page 2)" in format_passages([Document(page_content="a", metadata={"doc_id": "x", "page": 2})])
+
+
+def test_passages_shown_in_reading_order_with_relevance_numbers():
+    from langchain_core.documents import Document
+
+    from auralith.rag import format_passages
+
+    docs = [Document(page_content=f"text{i}", metadata={"doc_id": "cv", "page": 1, "chunk_index": i})
+            for i in (2, 0, 1)]  # relevance order
+    text = format_passages(docs)
+    assert text.index("[2] (source: cv, page 1, part 1)") < text.index("[3] (source: cv, page 1, part 2)") \
+        < text.index("[1] (source: cv, page 1, part 3)")

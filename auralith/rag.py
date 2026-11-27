@@ -38,15 +38,17 @@ ANSWER_PROMPT = ChatPromptTemplate.from_template(
 Answer the question using ONLY the numbered context passages below. Follow these rules:
 - Cite the passage numbers you used, like [1] or [2][3].
 - Be specific. If the answer is a number, a name, or a term, state it exactly.
+- Answer only what was asked, directly. If the question asks for one item (e.g. the
+  third job), give just that item - do not list the others.
 - If the question has several parts, answer every part the passages support.
   If a part is not covered, say which part is missing - but still answer the rest.
 - Only if the passages contain nothing that answers any part of the question,
   reply exactly:
   NOT_IN_CONTEXT
 - Do not guess and do not use outside knowledge.
-- Passages are listed by relevance, not in document order. For questions about
-  order (first, third, latest...), use each passage's page and part numbers.
-  Neighbouring parts may overlap; do not count the same item twice.
+- Passages are shown in the document's reading order (their numbers are only for
+  citing). Neighbouring parts overlap, so the same text can appear twice - do not
+  count a repeated item twice. Some parts of the document may be missing.
 
 Context passages:
 {context}
@@ -106,9 +108,14 @@ def format_passages(docs: list[Document]) -> str:
         part = "" if part is None else f", part {int(part) + 1}"  # absent on old indexes
         return f"source: {d.metadata.get('doc_id', '?')}, page {d.metadata.get('page', '?')}{part}"
 
-    return "\n\n".join(
-        f"[{i + 1}] ({label(d)})\n{d.page_content.strip()}" for i, d in enumerate(docs)
-    )
+    # Shown in reading order so "first/third/latest" work; numbers stay the relevance ranks.
+    # Old indexes lack chunk_index: keep relevance order there.
+    ordered = list(enumerate(docs))
+    if all(d.metadata.get("chunk_index") is not None for d in docs):
+        ordered.sort(key=lambda it: (str(it[1].metadata.get("doc_id")),
+                                     int(it[1].metadata.get("page") or 0),
+                                     int(it[1].metadata["chunk_index"])))
+    return "\n\n".join(f"[{i + 1}] ({label(d)})\n{d.page_content.strip()}" for i, d in ordered)
 
 
 def answer_question(
