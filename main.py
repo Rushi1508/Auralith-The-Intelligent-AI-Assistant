@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 
+import httpx
 import streamlit as st
 
 from auralith.config import Settings
@@ -37,6 +38,26 @@ MODULES = {
 }
 
 
+@st.cache_data(ttl=300)
+def _backend_caption() -> str:
+    """Describe the models the API actually serves, not this UI process's defaults."""
+    s = Settings.from_env()
+    info = {
+        "generator_model": s.generator_model,
+        "generator_provider": s.generator_provider,
+        "embedding_model": s.embedding_model,
+    }
+    if url := os.getenv("AURALITH_API_URL"):
+        try:
+            info = httpx.get(f"{url.rstrip('/')}/health", timeout=60).json()
+        except (httpx.HTTPError, ValueError):
+            return "API unreachable (it may be waking up - refresh in a minute)."
+    return (
+        f"Generator `{info.get('generator_model')}` ({info.get('generator_provider')}) · "
+        f"embeddings `{info.get('embedding_model')}`"
+    )
+
+
 def landing_page() -> None:
     st.title("Auralith")
     st.write(
@@ -44,12 +65,7 @@ def landing_page() -> None:
         "selected by measurement, not by default - see `results/` and the README."
     )
 
-    settings = Settings.from_env()
-    st.caption(
-        f"Provider: `{settings.provider}` · generator "
-        f"`{settings.generator_model}` ({settings.generator_provider}) · "
-        f"embeddings `{settings.embedding_model}`"
-    )
+    st.caption(_backend_caption())
 
     st.subheader("Modes")
     for name, blurb in [

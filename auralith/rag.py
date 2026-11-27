@@ -44,6 +44,9 @@ Answer the question using ONLY the numbered context passages below. Follow these
   reply exactly:
   NOT_IN_CONTEXT
 - Do not guess and do not use outside knowledge.
+- Passages are listed by relevance, not in document order. For questions about
+  order (first, third, latest...), use each passage's page and part numbers.
+  Neighbouring parts may overlap; do not count the same item twice.
 
 Context passages:
 {context}
@@ -98,10 +101,13 @@ def format_passages(docs: list[Document]) -> str:
     """Render passages with numbered, citable source labels."""
     if not docs:
         return "(no passages retrieved)"
+    def label(d: Document) -> str:
+        part = d.metadata.get("chunk_index")
+        part = "" if part is None else f", part {int(part) + 1}"  # absent on old indexes
+        return f"source: {d.metadata.get('doc_id', '?')}, page {d.metadata.get('page', '?')}{part}"
+
     return "\n\n".join(
-        f"[{i + 1}] (source: {d.metadata.get('doc_id', '?')}, "
-        f"page {d.metadata.get('page', '?')})\n{d.page_content.strip()}"
-        for i, d in enumerate(docs)
+        f"[{i + 1}] ({label(d)})\n{d.page_content.strip()}" for i, d in enumerate(docs)
     )
 
 

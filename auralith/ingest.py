@@ -117,7 +117,9 @@ def chunk_documents(
     chunks = splitter.split_documents(docs)
 
     seen: dict[str, int] = {}
-    for c in chunks:
+    for i, c in enumerate(chunks):
+        # Reading order: passages reach the model by relevance, so "the 3rd job" needs this.
+        c.metadata["chunk_index"] = i
         digest = hashlib.sha256(c.page_content.encode("utf-8")).hexdigest()[:16]
         # Identical text on two pages is common (headers, footers). Disambiguate
         # so genuinely distinct chunks never collide on ID.
