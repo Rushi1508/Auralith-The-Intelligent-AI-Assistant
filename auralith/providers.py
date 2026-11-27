@@ -26,7 +26,10 @@ from __future__ import annotations
 
 import functools
 import logging
+import os
+import time
 
+from langchain_core.cross_encoders import BaseCrossEncoder
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 
@@ -36,7 +39,129 @@ log = logging.getLogger(__name__)
 
 
 class ProviderError(RuntimeError):
-    """Raised when a model backend is unreachable or misconfigured."""
+    """Raised when a model backend is unreachable or misconfigured.
+
+    `retryable` is False for errors a retry cannot fix (bad key, bad request).
+    """
+
+    def __init__(self, message: str = "", retryable: bool = True) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+
+
+# fastembed's ONNX export of the same cross-encoder weights.
+_ONNX_CROSS_ENCODERS = {
+    "cross-encoder/ms-marco-MiniLM-L-6-v2": "Xenova/ms-marco-MiniLM-L-6-v2",
+}
+
+
+def _onnx_threads() -> int | None:
+    return int(os.getenv("AURALITH_ONNX_THREADS", "0")) or None
+
+
+class _OnnxEmbeddings(Embeddings):
+    """fastembed (ONNX) embeddings; same model, pooling and L2 norm as the torch path."""
+
+    def __init__(self, model) -> None:
+        self._model = model
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [v.tolist() for v in self._model.embed(texts, batch_size=8)]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.embed_documents([text])[0]
+
+
+_GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
+_GEMINI_DIM = 768
+_GEMINI_BATCH = 32
+_GEMINI_TRIES = 6
+
+
+class _GeminiEmbeddings(Embeddings):
+    """Gemini embeddings over REST: no local model, so the host needs no ML stack."""
+
+    def __init__(self, model: str, api_key: str, timeout: float) -> None:
+        self._model, self._key, self._timeout = model, api_key, min(timeout, 30)
+
+    def _post(self, texts: list[str], task: str, tries: int = _GEMINI_TRIES) -> list[list[float]]:
+        import httpx
+
+        body = {
+            "requests": [
+                {
+                    "model": f"models/{self._model}",
+                    "content": {"parts": [{"text": t}]},
+                    "taskType": task,
+                    "outputDimensionality": _GEMINI_DIM,
+                }
+                for t in texts
+            ]
+        }
+        url = f"{_GEMINI_API}/models/{self._model}:batchEmbedContents"
+        for attempt in range(tries):
+            try:
+                r = httpx.post(
+                    url, json=body, headers={"x-goog-api-key": self._key},
+                    timeout=self._timeout,
+                )
+            except httpx.TransportError as exc:
+                # httpx messages carry the URL, never the header, so the key stays out.
+                r, err = None, type(exc).__name__
+            else:
+                if r.status_code == 200:
+                    vals = [e["values"] for e in r.json()["embeddings"]]
+                    if len(vals) != len(texts):
+                        raise ProviderError(
+                            f"Gemini returned {len(vals)} embeddings for {len(texts)} inputs."
+                        )
+                    return vals
+                err = f"HTTP {r.status_code}"
+                if r.status_code != 429 and r.status_code < 500:
+                    raise ProviderError(
+                        f"Gemini embeddings rejected the request ({err}): check "
+                        "GEMINI_API_KEY and AURALITH_EMBEDDING_MODEL.",
+                        retryable=False,
+                    )
+            delay = min(2.0 ** (attempt + 1), 60.0)
+            if r is not None and (ra := r.headers.get("Retry-After", "")).isdigit():
+                delay = min(float(ra), 60.0)
+            if attempt < tries - 1:
+                log.warning("Gemini embeddings %s; retrying in %.0fs", err, delay)
+                time.sleep(delay)
+        raise ProviderError(f"Gemini embeddings unavailable after retries ({err}).")
+
+    def _embed(
+        self, texts: list[str], task: str, tries: int = _GEMINI_TRIES
+    ) -> list[list[float]]:
+        out: list[list[float]] = []
+        for i in range(0, len(texts), _GEMINI_BATCH):
+            for v in self._post(texts[i : i + _GEMINI_BATCH], task, tries):
+                n = sum(x * x for x in v) ** 0.5 or 1.0
+                out.append([x / n for x in v])  # Chroma/pgvector rank by L2
+        return out
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(texts, "RETRIEVAL_DOCUMENT")
+
+    def embed_query(self, text: str) -> list[float]:
+        # Few tries: /ask falls back to BM25 rather than stalling on a quota wait.
+        return self._embed([text], "RETRIEVAL_QUERY", tries=2)[0]
+
+
+class _OnnxCrossEncoder(BaseCrossEncoder):
+    def __init__(self, model) -> None:
+        self._model = model
+
+    def score(self, text_pairs: list[tuple[str, str]]) -> list[float]:
+        return list(self._model.rerank_pairs(text_pairs, batch_size=8))
+
+
+class _PassThroughCrossEncoder(BaseCrossEncoder):
+    """Keeps retrieval order: reranking off for hosts that cannot run a cross-encoder."""
+
+    def score(self, text_pairs: list[tuple[str, str]]) -> list[float]:
+        return [-float(i) for i in range(len(text_pairs))]
 
 
 @functools.lru_cache(maxsize=4)
@@ -59,6 +184,37 @@ def get_embeddings(settings: Settings) -> Embeddings:
 
         return OpenAIEmbeddings(
             model="text-embedding-3-small", api_key=settings.openai_api_key
+        )
+
+    if settings.embedding_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ProviderError("AURALITH_EMBEDDING_PROVIDER=gemini but GEMINI_API_KEY is not set.")
+        emb: Embeddings = _GeminiEmbeddings(
+            settings.embedding_model, settings.gemini_api_key, settings.request_timeout
+        )
+        if cache := os.getenv("AURALITH_EMBED_CACHE"):  # eval reruns: don't re-spend quota
+            from pathlib import Path
+
+            from langchain_classic.embeddings import CacheBackedEmbeddings
+            from langchain_classic.storage import LocalFileStore
+
+            emb = CacheBackedEmbeddings.from_bytes_store(
+                emb,
+                LocalFileStore(Path(cache) / "doc"),
+                namespace=f"{settings.embedding_model}-{_GEMINI_DIM}",
+                query_embedding_cache=LocalFileStore(Path(cache) / "query"),
+                key_encoder="sha256",
+            )
+        return emb
+
+    if settings.ml_backend == "onnx":
+        from fastembed import TextEmbedding
+
+        log.info("Loading ONNX embedding model: %s", settings.embedding_model)
+        return _OnnxEmbeddings(
+            TextEmbedding(
+                settings.embedding_model, threads=_onnx_threads(), enable_cpu_mem_arena=False
+            )
         )
 
     from langchain_huggingface import HuggingFaceEmbeddings
@@ -140,6 +296,23 @@ def get_cross_encoder(settings: Settings):
     indexing, this scores (query, passage) jointly, so it cannot be precomputed
     and is the expensive part of the pipeline.
     """
+    if settings.rerank_provider == "none":
+        return _PassThroughCrossEncoder()
+    if settings.rerank_provider != "local":
+        raise ProviderError(
+            f"Unknown rerank_provider {settings.rerank_provider!r} (use 'local' or 'none')."
+        )
+    if settings.ml_backend == "onnx":
+        from fastembed.rerank.cross_encoder import TextCrossEncoder
+
+        name = _ONNX_CROSS_ENCODERS.get(
+            settings.cross_encoder_model, settings.cross_encoder_model
+        )
+        log.info("Loading ONNX cross-encoder: %s", name)
+        return _OnnxCrossEncoder(
+            TextCrossEncoder(name, threads=_onnx_threads(), enable_cpu_mem_arena=False)
+        )
+
     from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
     log.info("Loading cross-encoder: %s", settings.cross_encoder_model)
@@ -189,6 +362,10 @@ def check_backend(settings: Settings, need_judge: bool = False) -> None:
     The original prototype's failure mode for a missing key was a raw traceback
     from deep inside the OpenAI SDK. Checking up front is cheap.
     """
+    if settings.embedding_provider == "gemini" and not settings.gemini_api_key:
+        raise ProviderError(
+            "AURALITH_EMBEDDING_PROVIDER=gemini but GEMINI_API_KEY is not set."
+        )
     if settings.provider == "openai":
         if not settings.openai_api_key:
             raise ProviderError("OPENAI_API_KEY is not set.")

@@ -114,7 +114,7 @@ def test_load_pg_chunks_matches_build(settings, root, base_config, sample_docs):
 
     r = root()
     _, report = build_index(sample_docs, base_config, settings, root=r)
-    chunks = load_pg_chunks(collection_name(r.name, base_config), settings)
+    chunks = load_pg_chunks(collection_name(r.name, base_config, settings), settings)
     assert len(chunks) == report.n_chunks
     assert all(c.page_content and "chunk_id" in c.metadata for c in chunks)
 
@@ -252,9 +252,47 @@ def test_delete_doc_drops_vectors_and_stale_cache(monkeypatch, sample_docs, pg_u
     assert client.delete(f"/documents/{doc_id}").status_code == 204
     api._CACHE.update(stale)
     assert client.post("/ask", json={"doc_id": doc_id, "question": "q"}).status_code == 404
-    coll = collection_name(doc_id, PRODUCTION_CONFIG)
+    coll = collection_name(doc_id, PRODUCTION_CONFIG, Settings.from_env())
     assert load_pg_chunks(coll, Settings.from_env()) == []
     assert doc_id not in [d["doc_id"] for d in client.get("/documents").json()]
+
+
+def test_delete_doc_drops_every_provider_collection(pg_url):
+    from sqlalchemy import text
+
+    from auralith.registry import delete_doc, save_doc
+
+    owner, doc, other = "u" + uuid.uuid4().hex[:8], uuid.uuid4().hex[:12], uuid.uuid4().hex[:12]
+    names = [f"{doc}__r_cs500", f"{doc}__r_cs500__gemini-embedding-001", f"{other}__r_cs500"]
+    save_doc(pg_url, owner, {"doc_id": doc, "filename": "a"})
+    from langchain_postgres import PGVector
+
+    for n in names:
+        PGVector(
+            embeddings=DeterministicFakeEmbedding(size=16), collection_name=n,
+            connection=_pg_engine(pg_url), use_jsonb=True,
+        ).add_texts(["x"], ids=[f"{n}:0"])
+
+    def left() -> tuple[set[str], int]:
+        with _pg_engine(pg_url).connect() as c:
+            q = "FROM langchain_pg_collection WHERE name = ANY(:n)"
+            cols = {r[0] for r in c.execute(text(f"SELECT name {q}"), {"n": names})}
+            embs = c.execute(
+                text(
+                    "SELECT count(*) FROM langchain_pg_embedding WHERE collection_id IN "
+                    f"(SELECT uuid {q})"
+                ),
+                {"n": names},
+            ).scalar_one()
+        return cols, embs
+
+    try:
+        assert left() == (set(names), 3)
+        assert delete_doc(pg_url, owner, doc)
+        assert left() == ({names[2]}, 1)  # other doc untouched, embeddings cascaded
+    finally:
+        with _pg_engine(pg_url).begin() as c:
+            c.execute(text("DELETE FROM langchain_pg_collection WHERE name = ANY(:n)"), {"n": names})
 
 
 def test_usage_counts_shared_and_atomic(pg_url):

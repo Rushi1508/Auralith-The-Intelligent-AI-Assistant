@@ -53,6 +53,7 @@ psycopg[binary]==3.3.9
 rank-bm25==0.2.2          # BM25Retriever's scoring backend
 sentence-transformers==5.7.0   # embeddings + cross-encoder reranking
 torch==2.12.0
+fastembed==0.9.1          # AURALITH_ML_BACKEND=onnx: same models via ONNX, no torch (small hosts)
 transformers==5.13.0
 
 # --- Documents ---

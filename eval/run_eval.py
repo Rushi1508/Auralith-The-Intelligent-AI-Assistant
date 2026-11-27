@@ -29,6 +29,7 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import platform
 import sys
 import time
@@ -42,12 +43,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from auralith.config import (  # noqa: E402
     BASELINE_CONFIG,
     CORPUS_DIR,
+    INDEX_DIR,
     PRODUCTION_CONFIG,
     RESULTS_DIR,
     RetrievalConfig,
     Settings,
+    effective_config,
 )
-from auralith.index import build_index, load_chunks_for_bm25  # noqa: E402
+from auralith.index import build_index, embed_tag, load_chunks_for_bm25  # noqa: E402
 from auralith.ingest import load_corpus  # noqa: E402
 from auralith.providers import (  # noqa: E402
     check_backend,
@@ -89,7 +92,7 @@ def _generation_tag(settings: Settings) -> str:
     and reported identical numbers.
     """
     text = ANSWER_PROMPT.messages[0].prompt.template
-    key = f"{text}|{settings.generator_model}|{settings.judge_model}"
+    key = f"{text}|{settings.generator_model}|{settings.judge_model}|{settings.embedding_model}"
     return hashlib.sha1(key.encode("utf-8")).hexdigest()[:8]
 
 
@@ -156,6 +159,7 @@ def run_config(
     results/.checkpoints/ and re-runs skip work already done, so an interrupted
     hour-long evaluation continues instead of starting over.
     """
+    config = effective_config(config, settings)
     started = time.perf_counter()
     docs = load_corpus(corpus_dir)
     store, build_report = build_index(docs, config, settings)
@@ -163,9 +167,11 @@ def run_config(
     retriever = build_retriever(store, config, settings, bm25_chunks=bm25_chunks)
 
     tag = _generation_tag(settings)
-    phase = f"gen_{tag}" if generate else "retrieval"
+    # Checkpoints must not replay rows retrieved with a different embedder/reranker.
+    emb = embed_tag(settings)
+    phase = (f"gen_{tag}" if generate else "retrieval") + emb
     # Judge prompt is hashed separately so a judge change re-judges without regenerating.
-    judge_phase = f"judge_{tag}_{hashlib.sha1(JUDGE_PROMPT.encode('utf-8')).hexdigest()[:8]}"
+    judge_phase = f"judge_{tag}_{hashlib.sha1(JUDGE_PROMPT.encode('utf-8')).hexdigest()[:8]}" + emb
     completed = _load_checkpoint(config, phase) if resume else {}
     if completed:
         log.info("Resuming %s: %d/%d already done", config.name, len(completed), len(questions))
@@ -315,6 +321,9 @@ def run_config(
             "generator_model": settings.generator_model if generate else None,
             "judge_model": settings.judge_model if (generate and judge_answers) else None,
             "embedding_model": settings.embedding_model,
+            "ml_backend": settings.ml_backend,
+            "embedding_provider": settings.embedding_provider,
+            "rerank_provider": settings.rerank_provider,
             "cross_encoder_model": (
                 settings.cross_encoder_model if config.use_rerank else None
             ),
@@ -406,7 +415,10 @@ def main() -> int:
     logging.getLogger("eval").setLevel(logging.INFO)
 
     settings = Settings.from_env()
-    check_backend(settings, need_judge=True)
+    if settings.embedding_provider == "gemini":  # before get_embeddings() is first cached
+        os.environ.setdefault("AURALITH_EMBED_CACHE", str(INDEX_DIR / "embed_cache"))
+    if not args.no_generate:
+        check_backend(settings, need_judge=True)
 
     if args.validate_judge:
         judge = get_judge_model(settings)
@@ -442,8 +454,9 @@ def main() -> int:
     named = {
         "baseline": BASELINE_CONFIG,
         # Dense-only, as in results/production*.json before rerank became the default.
-        "production": PRODUCTION_CONFIG.with_(use_rerank=False),
+        "production": PRODUCTION_CONFIG.with_(use_rerank=False, use_bm25=False),
         "production_rerank": PRODUCTION_CONFIG.with_(name="production_rerank"),
+        "production_hybrid": PRODUCTION_CONFIG.with_(name="production_hybrid", use_rerank=False),
         "production_decompose": PRODUCTION_CONFIG.with_(
             name="production_decompose", use_decompose=True
         ),

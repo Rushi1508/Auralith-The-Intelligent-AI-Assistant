@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1 HF_HOME=/hf TIKTOKEN_CACHE_DIR=/hf/tiktoken
+ENV PYTHONUNBUFFERED=1 HF_HOME=/hf TIKTOKEN_CACHE_DIR=/hf/tiktoken FASTEMBED_CACHE_PATH=/hf/fastembed
 COPY requirements.txt .
 # CPU-only torch first; PyPI's Linux wheel drags in several GB of CUDA libs
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.12.0 \

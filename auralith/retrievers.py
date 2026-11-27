@@ -140,7 +140,9 @@ def build_retriever(
 
     # When a cross-encoder will re-sort the results, earlier stages fetch a
     # wider pool. Otherwise they fetch exactly what the generator will see.
-    fetch_k = config.rerank_fetch_k if config.use_rerank else config.k
+    # With rerank_provider=none the "reranker" keeps order, so a wide pool only dilutes RRF.
+    rerank = config.use_rerank and settings.rerank_provider != "none"
+    fetch_k = config.rerank_fetch_k if rerank else config.k
 
     retriever: BaseRetriever = build_dense_retriever(store, config, fetch_k=fetch_k)
 
@@ -168,7 +170,7 @@ def build_retriever(
             include_original=True,
         )
 
-    if config.use_rerank:
+    if rerank:
         from langchain_classic.retrievers import ContextualCompressionRetriever
         from langchain_classic.retrievers.document_compressors import (
             CrossEncoderReranker,

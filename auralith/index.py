@@ -19,13 +19,13 @@ from __future__ import annotations
 
 import functools
 import logging
+import re
 import shutil
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 
@@ -56,8 +56,15 @@ def _pg_engine(url: str):
     return sqlalchemy.create_engine(url, pool_pre_ping=True)
 
 
-def collection_name(root_name: str, config) -> str:
-    return f"{root_name}__{config.index_key}"
+def embed_tag(settings: Settings) -> str:
+    """Vectors from different embedding models must never share an index."""
+    if settings.embedding_provider == "local":
+        return ""  # keeps existing index names valid
+    return "__" + re.sub(r"[^a-z0-9]+", "-", settings.embedding_model.lower())
+
+
+def collection_name(root_name: str, config, settings: Settings) -> str:
+    return f"{root_name}__{config.index_key}{embed_tag(settings)}"
 
 
 _PG_LOCK = threading.Lock()  # PGVector() registers tables on shared MetaData; not thread-safe
@@ -95,7 +102,7 @@ def load_pg_chunks(collection: str, settings) -> list[Document]:
 
 def _build_pgvector(docs, config, settings, root, force, embeddings):
     # root namespaces per-upload indexes, as it does for the Chroma directory.
-    collection = collection_name(root.name, config)
+    collection = collection_name(root.name, config, settings)
     chunks = chunk_documents(docs, config)
     # The embedding id is a primary key shared across collections; chunk_id
     # metadata stays unchanged.
@@ -129,7 +136,8 @@ def build_index(
     Returns the store plus a report, so callers can record whether the work was
     real or served from disk.
     """
-    path = index_path(config.index_key, root)
+    key = config.index_key + embed_tag(settings)
+    path = index_path(key, root)
     embeddings = get_embeddings(settings)
     if settings.database_url:
         return _build_pgvector(docs, config, settings, root, force, embeddings)
@@ -139,6 +147,8 @@ def build_index(
 
     # A populated directory means we have already embedded this scheme.
     if path.exists() and any(path.iterdir()):
+        from langchain_chroma import Chroma  # lazy: unused with Postgres
+
         store = Chroma(
             collection_name=config.index_key,
             embedding_function=embeddings,
@@ -161,6 +171,8 @@ def build_index(
     path.mkdir(parents=True, exist_ok=True)
 
     started = time.perf_counter()
+    from langchain_chroma import Chroma
+
     store = Chroma.from_documents(
         documents=chunks,
         collection_name=config.index_key,

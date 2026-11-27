@@ -167,8 +167,11 @@ def count_usage(url: str, owner: str, windows: list[tuple[str, int]], now: float
     return out
 
 
-def delete_doc(url: str, owner: str, doc_id: str, collection: str) -> bool:
-    """Drop the registry row and its pgvector collection (embeddings cascade)."""
+def delete_doc(url: str, owner: str, doc_id: str) -> bool:
+    """Drop the registry row and every `<doc_id>__*` pgvector collection (embeddings cascade).
+
+    One per embedding provider/chunking scheme the doc was ever indexed under.
+    """
     ensure_schema(url)
     with _pg_engine(url).begin() as c:
         gone = c.execute(
@@ -176,7 +179,10 @@ def delete_doc(url: str, owner: str, doc_id: str, collection: str) -> bool:
             {"o": owner, "d": doc_id},
         ).first()
         if gone:
-            c.execute(text("DELETE FROM langchain_pg_collection WHERE name = :n"), {"n": collection})
+            c.execute(
+                text("DELETE FROM langchain_pg_collection WHERE name LIKE :p ESCAPE '\\'"),
+                {"p": doc_id + "\\_\\_%"},  # doc_id is 12 hex (row existed): no wildcards
+            )
     return gone is not None
 
 

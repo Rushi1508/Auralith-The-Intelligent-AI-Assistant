@@ -35,7 +35,7 @@ What made the difference:
 |---|---|
 | Chunking 500 / 100 overlap | The original 7500-token "chunking" never split a single page. **Overlap mattered more than size.** |
 | k = 6 | hit@k and MRR stop improving at 6, and k=8 adds 33% more context for one question. |
-| Hybrid BM25: **rejected** | Dense retrieval already scored 1.00 on the keyword-heavy questions BM25 was meant to help. |
+| Hybrid BM25: rejected in Phase C, **on** since | On the 28-question set dense already scored 1.00 on the keyword-heavy questions. On the 142-question v2 set it helps: with Gemini embeddings and no reranker MRR 0.841 -> 0.867 at recall 0.939; with MiniLM + reranker recall 0.904 -> 0.953, MRR 0.772 -> 0.820 (see [results/gemini_embeddings.md](results/gemini_embeddings.md)). |
 | Reranking 20 → 6: **on** | Slightly lower recall (loses one page) but better ranking. End to end it fixed 3 answers and broke none (hand 19 → 22–24/28), matching the 7B generator. Switched on as the default. On the 142-question v2 set the gain is proven (see below). |
 
 Retrieval is no longer the bottleneck. The right page now reaches the model for 24 of
@@ -185,6 +185,8 @@ The embedding and reranker models download once into the `hf` volume; vectors, t
 ### Deploy (free)
 
 `docker-compose.prod.yml` layers production settings on the same stack: Caddy with automatic HTTPS as the only public service, Gemini as the generator (no Ollama), restart policies, and required secrets (compose refuses to start without them). [docs/deploy-oracle.md](docs/deploy-oracle.md) walks through it on an Oracle Cloud Always Free ARM VM, with a free `sslip.io` hostname, at $0.
+
+No VM and no card? [docs/deploy-free.md](docs/deploy-free.md) runs the API on Render's free tier (Gemini embeddings and no local models, `Dockerfile.render`; retrieval gate in [results/gemini_embeddings.md](results/gemini_embeddings.md)), Postgres on Neon and the UI on Streamlit Community Cloud.
 
 ### Logs and tracing
 

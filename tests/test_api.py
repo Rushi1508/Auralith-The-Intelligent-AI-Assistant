@@ -365,3 +365,15 @@ def test_admin_keys_access(client, monkeypatch):
     assert client.post("/admin/keys", json=body, headers=b).status_code == 403
     assert client.post("/admin/keys", json=body, headers=a).status_code == 501  # no DB
     assert client.post("/admin/keys", json={"user": "Bad Name"}, headers=a).status_code == 422
+
+
+def test_ingest_provider_error_is_503_retry_after(client, monkeypatch, sample_docs):
+    from auralith.providers import ProviderError
+
+    def boom(*a, **k):
+        raise ProviderError("Gemini embeddings unavailable after retries (HTTP 429).")
+
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: sample_docs)
+    monkeypatch.setattr("auralith.api.build_index", boom)
+    r = client.post("/ingest", files={"file": ("a.pdf", PDF, "application/pdf")})
+    assert r.status_code == 503 and r.headers["retry-after"] == "60"

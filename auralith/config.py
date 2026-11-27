@@ -48,6 +48,14 @@ class Settings:
     judge_model: str = "qwen2.5:7b"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     cross_encoder_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # "onnx" runs the same two models through fastembed (no torch), for small hosts.
+    # Default onnx: retrieval identical to torch on all 142 eval questions
+    # (results/onnx_equivalence.md). Set "torch" to use sentence-transformers.
+    ml_backend: Literal["torch", "onnx"] = "onnx"
+    # "gemini" = hosted embeddings (768-d), for hosts too small to run models locally.
+    embedding_provider: Literal["local", "gemini"] = "local"
+    # "none" keeps retrieval order (thin hosts can't run the cross-encoder).
+    rerank_provider: Literal["local", "none"] = "local"
     ollama_base_url: str = "http://localhost:11434"
     openai_api_key: str | None = None
     # Hosted *generator only* (Gemini's OpenAI-compatible endpoint). The judge,
@@ -72,6 +80,19 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        embedding_model = os.getenv(
+            "AURALITH_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+        )
+        # A leftover local model name (e.g. from .env) is meaningless to Gemini.
+        if os.getenv("AURALITH_EMBEDDING_PROVIDER") == "gemini" and not embedding_model.startswith(
+            "gemini"
+        ):
+            embedding_model = "gemini-embedding-001"
+        rerank_provider = os.getenv("AURALITH_RERANK_PROVIDER", "local")
+        if rerank_provider not in ("local", "none"):
+            raise ValueError(
+                f"AURALITH_RERANK_PROVIDER must be 'local' or 'none', got {rerank_provider!r}"
+            )
         return cls(
             provider=os.getenv("AURALITH_PROVIDER", "ollama"),  # type: ignore[arg-type]
             generator_model=os.getenv(
@@ -81,12 +102,13 @@ class Settings:
                 else "llama3.2:3b",
             ),
             judge_model=os.getenv("AURALITH_JUDGE_MODEL", "qwen2.5:7b"),
-            embedding_model=os.getenv(
-                "AURALITH_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
-            ),
+            embedding_model=embedding_model,
             cross_encoder_model=os.getenv(
                 "AURALITH_CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
             ),
+            ml_backend=os.getenv("AURALITH_ML_BACKEND", "onnx"),  # type: ignore[arg-type]
+            embedding_provider=os.getenv("AURALITH_EMBEDDING_PROVIDER", "local"),  # type: ignore[arg-type]
+            rerank_provider=rerank_provider,  # type: ignore[arg-type]
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             generator_provider=os.getenv("AURALITH_GENERATOR_PROVIDER", "ollama"),  # type: ignore[arg-type]
@@ -262,12 +284,26 @@ BASELINE_CONFIG = RetrievalConfig(
 #     (bert-006, a wrong refusal in both runs), MRR 0.692 -> 0.705.
 #   Switched on: about the same as the 7B generator for one cross-encoder pass.
 #   Strict CI [0, +0.25] touches 0, so it is a default, not a claimed gain.
+#
+def effective_config(config: RetrievalConfig, settings: Settings) -> RetrievalConfig:
+    """The config that actually runs: rerank_provider=none means no reranking, so the
+    slug, describe() and eval checkpoints must say so (else no-rerank rows replay as reranked)."""
+    return config.with_(use_rerank=False) if settings.rerank_provider == "none" else config
+
+
+# Hybrid on (BM25 0.3 / dense 0.7), 142 questions, 0 errors (results/gemini_embeddings.md):
+#   Gemini embeddings, rerank none (Render): recall 0.9388  MRR 0.8674  (dense 0.9388 / 0.841)
+#   MiniLM + local cross-encoder (default):  recall 0.9533  MRR 0.8203  (was 0.904 / 0.772)
+# With rerank_provider=none the pool is k, not rerank_fetch_k: RRF over 20-deep lists
+# measured worse there (recall 0.9274, MRR 0.8456).
 PRODUCTION_CONFIG = RetrievalConfig(
     name="production",
     splitter="recursive",
     chunk_size=500,
     chunk_overlap=100,
     k=6,
+    use_bm25=True,
+    dense_weight=0.7,
     use_rerank=True,
     rerank_fetch_k=20,
     notes="Phase B chunking/k + Phase F rerank. See results/comparison_ci.md.",

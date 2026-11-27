@@ -26,7 +26,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response, Streamin
 import psycopg
 from pydantic import BaseModel, Field
 
-from auralith.config import PRODUCTION_CONFIG, Settings
+from auralith.config import PRODUCTION_CONFIG, Settings, effective_config
 from auralith.graph.build import run_graph, summarise
 from auralith.index import (
     build_index,
@@ -216,19 +216,20 @@ def _get_doc(doc_id: str, owner: str, settings: Settings) -> dict | None:
             return None
         if hit := _CACHE.get((owner, doc_id)):
             return hit
-        coll = collection_name(doc_id, PRODUCTION_CONFIG)
+        coll = collection_name(doc_id, PRODUCTION_CONFIG, settings)
         store = open_pgvector(coll, settings)
         chunks = load_pg_chunks(coll, settings)
         if not chunks:  # registry row without vectors: treat as unknown
             return None
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(503, "Database unavailable") from exc
+    config = effective_config(PRODUCTION_CONFIG, settings)
     entry = {
         "retriever": build_retriever(
-            store, PRODUCTION_CONFIG, settings,
-            bm25_chunks=chunks if PRODUCTION_CONFIG.use_bm25 else None,
+            store, config, settings,
+            bm25_chunks=chunks if config.use_bm25 else None,
         ),
-        "sparse": build_sparse_retriever(chunks, PRODUCTION_CONFIG),
+        "sparse": build_sparse_retriever(chunks, config),
         "info": info,
     }
     _cache_put(owner, doc_id, entry)
@@ -292,6 +293,9 @@ def health() -> dict:
         "generator_provider": s.generator_provider,
         "generator_model": s.generator_model,
         "embedding_model": s.embedding_model,
+        "ml_backend": s.ml_backend,
+        "embedding_provider": s.embedding_provider,
+        "rerank_provider": s.rerank_provider,
         "auth": auth,
     }
 
@@ -310,7 +314,8 @@ def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dic
         raise HTTPException(415, "File is not a PDF.")
 
     doc_id = hashlib.sha256(user.encode() + data).hexdigest()[:12]
-    settings, config = Settings.from_env(), PRODUCTION_CONFIG
+    settings = Settings.from_env()
+    config = effective_config(PRODUCTION_CONFIG, settings)
     _rate_limit(settings, user, "ingest")
     with _doc_lock(settings, doc_id):
         if existing := _get_doc(doc_id, user, settings):
@@ -335,6 +340,10 @@ def ingest(file: UploadFile, user: Annotated[str, Depends(current_user)]) -> dic
                 sparse = build_sparse_retriever(chunks, config)
         except HTTPException:
             raise
+        except ProviderError as exc:  # embedding API quota/outage: retryable, not a bad PDF
+            if not exc.retryable:  # bad key/request: retrying cannot help
+                raise HTTPException(502, str(exc)) from exc
+            raise HTTPException(503, str(exc), headers={"Retry-After": "60"}) from exc
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(422, f"{type(exc).__name__}: {exc}") from exc
 
@@ -383,9 +392,8 @@ def delete_document(doc_id: str, user: Annotated[str, Depends(current_user)]) ->
             if found:
                 del DOCS[doc_id]
         else:
-            coll = collection_name(doc_id, PRODUCTION_CONFIG)
             try:
-                found = delete_doc(settings.database_url, user, doc_id, coll)
+                found = delete_doc(settings.database_url, user, doc_id)
             except Exception as exc:  # noqa: BLE001
                 raise HTTPException(503, "Database unavailable") from exc
             _CACHE.pop((user, doc_id), None)
@@ -453,7 +461,7 @@ def ask(
     _check_backend(settings)
     with _slot():
         r = answer_question(
-            body.question, doc["retriever"], PRODUCTION_CONFIG, settings,
+            body.question, doc["retriever"], effective_config(PRODUCTION_CONFIG, settings), settings,
             fallback=doc["sparse"],
         )
     degraded = "degraded" in r.meta
