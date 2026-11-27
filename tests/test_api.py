@@ -377,3 +377,95 @@ def test_ingest_provider_error_is_503_retry_after(client, monkeypatch, sample_do
     monkeypatch.setattr("auralith.api.build_index", boom)
     r = client.post("/ingest", files={"file": ("a.pdf", PDF, "application/pdf")})
     assert r.status_code == 503 and r.headers["retry-after"] == "60"
+
+
+@pytest.fixture(autouse=True)
+def _guest_off(monkeypatch):
+    monkeypatch.delenv("AURALITH_GUEST_ENABLED", raising=False)
+
+
+def test_client_ip_rightmost_xff_then_fallback():
+    from types import SimpleNamespace as NS
+
+    def req(xff):
+        h = {"x-forwarded-for": xff} if xff is not None else {}
+        return NS(headers=h, client=NS(host="9.9.9.9"))
+
+    assert api._client_ip(req("1.1.1.1, 2.2.2.2 ,  3.3.3.3 ")) == "3.3.3.3"
+    assert api._client_ip(req("6.6.6.6")) == "6.6.6.6"
+    assert api._client_ip(req(None)) == "9.9.9.9"
+    assert api._client_ip(req("")) == "9.9.9.9"
+
+
+def test_limit_plan_guest_vs_named():
+    assert api._limit_plan("alice", "llm") == [("alice", api.LIMITS["llm"])]
+    assert api._limit_plan("guest-ab", "ingest") == [
+        ("guest-ab", api.GUEST_LIMITS["ingest"]),
+        ("*guests", api.GUEST_POOL["ingest"]),
+    ]
+
+
+def test_guest_pool_cap_shared_and_named_unaffected(monkeypatch):
+    monkeypatch.setitem(api.GUEST_LIMITS, "llm", [(5, 60)])
+    monkeypatch.setitem(api.GUEST_POOL, "llm", [(2, 86400)])
+    s = Settings.from_env()
+    api._rate_limit(s, "guest-a", "llm")
+    api._rate_limit(s, "guest-b", "llm")
+    with pytest.raises(api.HTTPException) as e:
+        api._rate_limit(s, "guest-c", "llm")
+    assert e.value.status_code == 429
+    api._rate_limit(s, "alice", "llm")  # named users are outside the pool
+
+
+def test_guest_per_user_limit_lower(monkeypatch):
+    monkeypatch.setitem(api.GUEST_LIMITS, "llm", [(1, 60)])
+    monkeypatch.setitem(api.GUEST_POOL, "llm", [(100, 86400)])
+    s = Settings.from_env()
+    api._rate_limit(s, "guest-a", "llm")
+    with pytest.raises(api.HTTPException) as e:
+        api._rate_limit(s, "guest-a", "llm")
+    assert e.value.status_code == 429
+    api._rate_limit(s, "guest-b", "llm")
+
+
+def test_guest_fails_closed_named_fails_open(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+
+    def down(*a, **k):
+        raise OSError("db down")
+
+    monkeypatch.setattr("auralith.api.count_usage", down)
+    s = Settings.from_env()
+    api._rate_limit(s, "alice", "llm")  # no raise
+    with pytest.raises(api.HTTPException) as e:
+        api._rate_limit(s, "guest-a", "llm")
+    assert e.value.status_code == 503 and "Retry-After" in e.value.headers
+
+
+def test_guest_endpoint_disabled_404_and_no_db_501(client, monkeypatch):
+    assert client.post("/guest").status_code == 404
+    monkeypatch.setenv("AURALITH_GUEST_ENABLED", "1")
+    assert client.post("/guest").status_code == 501
+
+
+def test_admin_rejects_guest_prefix(client, monkeypatch):
+    a, _ = _keys(monkeypatch)
+    monkeypatch.setenv("AURALITH_ADMINS", "alice")
+    r = client.post("/admin/keys", json={"user": "guest-abc"}, headers=a)
+    assert r.status_code == 422
+    r = client.post("/admin/keys", json={"user": "sample"}, headers=a)
+    assert r.status_code == 501  # allowed, then no DB
+
+
+def test_sample_disabled_404_and_ask_fallback(client, monkeypatch, sample_docs):
+    api.DOCS["abc"] = {
+        "retriever": FakeRetriever(sample_docs), "sparse": None,
+        "info": {"doc_id": "abc", "owner": "sample", "filename": "m"},
+    }
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: FakeChatModel("ok [1]"))
+    assert client.get("/sample").status_code == 404
+    body = {"doc_id": "abc", "question": "q"}
+    assert client.post("/ask", json=body).status_code == 404  # no fallback when off
+    monkeypatch.setenv("AURALITH_GUEST_ENABLED", "1")
+    assert client.get("/sample").json()["doc_id"] == "abc"
+    assert client.post("/ask", json=body).status_code == 200

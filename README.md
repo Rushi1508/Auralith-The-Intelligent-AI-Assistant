@@ -8,6 +8,8 @@ Ask questions about a PDF and get answers that cite their source passages. Gener
 questions go through a LangGraph agent that picks between web search, code
 generation, or conversation. It runs fully locally by default: no API key needed. A free Gemini key can optionally replace the local generator.
 
+The public demo gives each visitor a temporary guest session and a sample café menu to try (see [docs/deploy-free.md](docs/deploy-free.md)).
+
 ## Highlights
 
 - **Retrieval recall up from 0.62 to 0.88.** Retrieval misses fell 78% (9/26 → 2/26) after systematic sweeps of chunking, k, hybrid search and reranking.

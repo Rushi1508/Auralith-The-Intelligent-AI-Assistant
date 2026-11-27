@@ -52,8 +52,24 @@ def start_pdf_module() -> None:
     st.title("Auralith")
     st.caption("PDF Query Mode")
 
+    key = st.session_state.get("api_key")
+    if st.session_state.get("sample_for") != key:  # once per key; None unless guest mode is on
+        st.session_state.sample_for = key
+        try:
+            r = httpx.get(f"{API_URL}/sample", headers=_headers(), timeout=30)
+            st.session_state.sample_info = r.json() if r.status_code == 200 else None
+        except (httpx.HTTPError, ValueError):
+            st.session_state.sample_info = None
+    sample = st.session_state.sample_info
+    use_sample = sample and st.toggle(
+        "Try the sample café menu", key="use_sample",
+        help="A made-up café menu: drinks, food, prices, opening hours.",
+    )
+
     uploaded = st.file_uploader("Upload a PDF", type=["pdf"])
-    if uploaded is None:
+    if uploaded is None and use_sample:
+        info = sample
+    elif uploaded is None:
         info = _pick_existing()
         if info is None:
             return
@@ -124,7 +140,17 @@ def _ask(info: dict) -> None:
     )
     st.caption(f"Retrieval config: {info['config']}")
 
-    question = st.text_input("Question", placeholder="What does this document say about...")
+    if info.get("owner") == "sample":
+        for q in (
+            "How much is a large latte?",
+            "What vegan options are there?",
+            "What time do you close on Sunday?",
+            "What's the cheapest dessert?",
+        ):
+            st.button(q, on_click=st.session_state.__setitem__, args=("pdf_question", q))
+    question = st.text_input(
+        "Question", placeholder="What does this document say about...", key="pdf_question"
+    )
     if not st.button("Ask", type="primary") or not question.strip():
         return
 

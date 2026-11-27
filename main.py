@@ -85,11 +85,27 @@ def landing_page() -> None:
 def main() -> None:
     st.set_page_config(page_title="Auralith", page_icon="A", layout="centered")
     st.session_state.setdefault("module", "Home")
-    st.session_state.api_key = st.sidebar.text_input(
+    typed = st.sidebar.text_input(
         "API key", value=os.getenv("AURALITH_API_KEY", ""), type="password"
     )
-
     current = st.session_state.module
+    # Only when a mode is opened: landing-page visits and bots must not use the guest-key cap.
+    if (not typed and current != "Home" and "guest_key" not in st.session_state
+            and os.getenv("AURALITH_API_URL")):
+        try:  # one attempt per session; 404 when the API has guest mode off
+            r = httpx.post(f"{os.environ['AURALITH_API_URL'].rstrip('/')}/guest", timeout=60)
+            st.session_state.guest_key = r.json()["key"] if r.status_code == 201 else None
+        except (httpx.HTTPError, ValueError, KeyError):
+            st.session_state.guest_key = None
+    guest = st.session_state.get("guest_key")
+    st.session_state.api_key = typed or guest or ""
+    if not typed and guest:
+        st.sidebar.caption("You're using a temporary guest session (limits apply).")
+    elif not typed and current == "Home":
+        st.sidebar.caption("No key needed: open a mode to start a guest session.")
+    elif not typed:
+        st.sidebar.caption("Enter an API key, or refresh to retry a guest session.")
+
     if current == "Home":
         landing_page()
     else:

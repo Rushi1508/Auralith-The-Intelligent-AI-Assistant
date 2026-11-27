@@ -50,6 +50,25 @@ curl.exe -X POST https://<service>.onrender.com/admin/keys -H "X-API-Key: <admin
 
 Open the Streamlit URL, enter a key, upload a PDF in PDF Query, ask a question.
 
+## Guest access (public demo)
+
+With `AURALITH_GUEST_ENABLED=1` (set in `render.yaml`) the Streamlit UI fetches a temporary key from `POST /guest` when the visitor types none, and offers a shared sample café menu.
+
+One-time sample setup (the `sample` user is reserved: its documents are readable by every guest, read-only):
+
+```powershell
+curl.exe -X POST https://<service>.onrender.com/admin/keys -H "X-API-Key: <admin secret>" -H "Content-Type: application/json" -d '{\"user\":\"sample\"}'
+curl.exe -X POST https://<service>.onrender.com/ingest -H "X-API-Key: <sample key>" -F "file=@samples/cafe-menu.pdf;type=application/pdf"
+```
+
+Revoke the sample key afterwards if you like (`DELETE /admin/keys/<id>`); the document stays. Re-ingest after changing the embedder. `samples/make_cafe_menu.py` regenerates the PDF.
+
+- **Limits** (env, per guest): `AURALITH_GUEST_LLM_PER_MIN=5`, `AURALITH_GUEST_LLM_PER_DAY=20`, `AURALITH_GUEST_INGEST_PER_DAY=2`. **Shared by all guests**: `AURALITH_GUEST_POOL_LLM_PER_DAY=200`, `AURALITH_GUEST_POOL_INGEST_PER_DAY=10`, `AURALITH_GUEST_KEYS_PER_DAY=100` new guests. **Per IP**: `AURALITH_GUEST_PER_IP_HOUR=30` new guests. 0 turns a limit off.
+- **Hard caps fail closed**: if the usage counter (Postgres) errors, guest requests and `/guest` get 503 instead of being allowed. Named users still fail open.
+- **Kill switch**: `AURALITH_GUEST_ENABLED=0` (or unset) makes `/guest` and `/sample` 404 and stops the sample fallback in `/ask`. Existing guest keys keep working for their own documents until they expire.
+- **Expiry**: guest keys die after `AURALITH_GUEST_TTL_HOURS` (24). Each `/guest` call lazily sweeps a few expired guest keys, documents and counters. Guest chat checkpoints are not swept.
+- **Shared IPs**: Streamlit Cloud makes the server-side call to `/guest`, so every visitor appears to come from the same IP and the per-IP cap is effectively a global cap there; the shared pool is what protects the Gemini quota. The IP is the right-most `X-Forwarded-For` entry (assumes one proxy, Render); the raw header is logged on each `/guest` call so you can verify. Do not set `FORWARDED_ALLOW_IPS`.
+
 ## Limits
 
 - **Measured** in Docker with `--cpus=0.1 --memory=512m` on `eval/corpus/attention.pdf` (pgvector Postgres, Gemini generator and embeddings): peak memory 233 MB (cgroup) / 243 MB (process RSS), no OOM. Ingest of the 15-page PDF 147 s (almost all PDF parsing and chunking on 0.1 CPU; the embedding calls took 4 s). /ask: 17 s the first time, 1 s on a repeat. Render's burst CPU may differ.

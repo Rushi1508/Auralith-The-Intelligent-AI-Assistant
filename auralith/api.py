@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import tempfile
 import threading
 import time
@@ -40,6 +41,9 @@ from auralith.providers import ProviderError, check_backend
 from auralith.rag import answer_question
 from auralith.registry import (
     _USER,
+    GUEST_PREFIX,
+    GUEST_TTL_S,
+    SAMPLE_OWNER,
     admins,
     count_usage,
     create_key,
@@ -52,6 +56,7 @@ from auralith.registry import (
     load_keys,
     revoke_key,
     save_doc,
+    sweep_guests,
     user_for_key,
 )
 from auralith.retrievers import build_retriever, build_sparse_retriever
@@ -77,6 +82,22 @@ LIMITS = {
     ],
     "ingest": [(int(os.getenv("AURALITH_INGEST_PER_DAY", "30")), 86400)],
 }
+# Guest mode (AURALITH_GUEST_ENABLED=1): per-guest limits plus one shared pool under an owner
+# name ("*guests") that the user-name regex can never produce. Pool/IP checks fail closed.
+GUEST_LIMITS = {
+    "llm": [
+        (int(os.getenv("AURALITH_GUEST_LLM_PER_MIN", "5")), 60),
+        (int(os.getenv("AURALITH_GUEST_LLM_PER_DAY", "20")), 86400),
+    ],
+    "ingest": [(int(os.getenv("AURALITH_GUEST_INGEST_PER_DAY", "2")), 86400)],
+}
+GUEST_POOL = {
+    "llm": [(int(os.getenv("AURALITH_GUEST_POOL_LLM_PER_DAY", "200")), 86400)],
+    "ingest": [(int(os.getenv("AURALITH_GUEST_POOL_INGEST_PER_DAY", "10")), 86400)],
+    "guest": [(int(os.getenv("AURALITH_GUEST_KEYS_PER_DAY", "100")), 86400)],
+}
+GUEST_PER_IP_HOUR = int(os.getenv("AURALITH_GUEST_PER_IP_HOUR", "30"))
+GUEST_POOL_OWNER = "*guests"
 # shortcut: dev-mode (no DATABASE_URL) counters are per process and never pruned
 _USAGE: dict[tuple[str, str, int], int] = {}
 _USAGE_LOCK = threading.Lock()
@@ -168,9 +189,35 @@ def current_user(
     return user
 
 
+def _guest_enabled() -> bool:
+    return os.getenv("AURALITH_GUEST_ENABLED") == "1"
+
+
+def _client_ip(request: Request) -> str:
+    # shortcut: assumes exactly one appending proxy (Render); verify by logging raw XFF once
+    last = request.headers.get("x-forwarded-for", "").rsplit(",", 1)[-1].strip()
+    return last or (request.client.host if request.client else "unknown")
+
+
+def _limit_plan(user: str, bucket: str) -> list[tuple[str, list[tuple[int, int]]]]:
+    """(counter owner, rules) pairs to check, per-user first."""
+    if user.startswith(GUEST_PREFIX):
+        return [(user, GUEST_LIMITS[bucket]), (GUEST_POOL_OWNER, GUEST_POOL[bucket])]
+    return [(user, LIMITS[bucket])]
+
+
 def _rate_limit(settings: Settings, user: str, bucket: str) -> None:
-    """429 once the caller passes any of the bucket's limits in the current window."""
-    rules = [(lim, sec) for lim, sec in LIMITS[bucket] if lim > 0]
+    # Guests fail closed: the hard cap on shared Gemini quota must hold during an outage.
+    for owner, rules in _limit_plan(user, bucket):
+        _check(settings, owner, bucket, rules, fail_closed=user.startswith(GUEST_PREFIX))
+
+
+def _check(
+    settings: Settings, user: str, bucket: str, rules: list[tuple[int, int]],
+    fail_closed: bool = False,
+) -> None:
+    """429 once the owner passes any rule in the current window (0 = off)."""
+    rules = [(lim, sec) for lim, sec in rules if lim > 0]
     if not rules:
         return
     now = time.time()
@@ -185,7 +232,13 @@ def _rate_limit(settings: Settings, user: str, bucket: str) -> None:
                     k = (user, key, int(now // sec))
                     _USAGE[k] = _USAGE.get(k, 0) + 1
                     counts.append(_USAGE[k])
-    except Exception:  # noqa: BLE001  # a limiter outage must not take the API down
+    except Exception as exc:  # noqa: BLE001
+        if fail_closed:
+            log.warning("rate limiter unavailable; refusing guest request", exc_info=True)
+            raise HTTPException(
+                503, "Rate limiter unavailable.", headers={"Retry-After": "30"}
+            ) from exc
+        # a limiter outage must not take the API down for named users
         log.warning("rate limiter unavailable; allowing request", exc_info=True)
         return
     for (lim, sec), n in zip(rules, counts):
@@ -418,6 +471,8 @@ def _admin_db() -> str:
 @app.post("/admin/keys", status_code=201)
 def admin_create_key(body: KeyRequest, _: Annotated[str, Depends(admin_user)]) -> dict:
     """Issue a key for a (new or existing) user. The raw key is shown only in this response."""
+    if body.user.startswith(GUEST_PREFIX):
+        raise HTTPException(422, f"User names starting with {GUEST_PREFIX!r} are reserved.")
     url = _admin_db()
     try:
         return create_key(url, body.user)
@@ -447,12 +502,44 @@ def admin_revoke_key(key_id: int, _: Annotated[str, Depends(admin_user)]) -> Res
     return Response(status_code=204)
 
 
+@app.post("/guest", status_code=201)
+def guest(request: Request) -> dict:
+    """Anonymous, short-lived key for the public demo (off unless AURALITH_GUEST_ENABLED=1)."""
+    if not _guest_enabled():
+        raise HTTPException(404, "Guest access is disabled.")
+    url = _admin_db()
+    log.info("guest issuance x-forwarded-for=%r", request.headers.get("x-forwarded-for"))
+    try:
+        sweep_guests(url)
+    except Exception:  # noqa: BLE001  # best effort, never blocks issuance
+        log.warning("guest sweep failed", exc_info=True)
+    settings = Settings.from_env()
+    _check(settings, f"ip:{_client_ip(request)}", "guest", [(GUEST_PER_IP_HOUR, 3600)], True)
+    _check(settings, GUEST_POOL_OWNER, "guest", GUEST_POOL["guest"], True)
+    try:
+        made = create_key(url, f"{GUEST_PREFIX}{secrets.token_hex(6)}")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, "Database unavailable") from exc
+    return {"key": made["key"], "user": made["user"], "expires_in": GUEST_TTL_S}
+
+
+@app.get("/sample")
+def sample(_: Annotated[str, Depends(current_user)]) -> dict:
+    """The shared read-only demo document (guest mode only)."""
+    docs = list_documents(SAMPLE_OWNER) if _guest_enabled() else []
+    if not docs:
+        raise HTTPException(404, "No sample document.")
+    return docs[0]
+
+
 @app.post("/ask")
 def ask(
     body: AskRequest, user: Annotated[str, Depends(current_user)]
 ) -> StreamingResponse:
     settings = Settings.from_env()
     doc = _get_doc(body.doc_id, user, settings)
+    if doc is None and _guest_enabled() and user != SAMPLE_OWNER:  # read-only shared sample
+        doc = _get_doc(body.doc_id, SAMPLE_OWNER, settings)
     if doc is None:
         raise HTTPException(404, "Unknown doc_id; ingest the PDF first.")
     if not body.question.strip():

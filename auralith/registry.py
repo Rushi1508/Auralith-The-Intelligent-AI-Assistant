@@ -10,12 +10,16 @@ import os
 import re
 import secrets
 import sys
+import time
 
 from sqlalchemy import text
 
 from auralith.index import _pg_engine
 
 _USER = re.compile(r"^[a-z0-9_-]{1,64}$")
+GUEST_PREFIX = "guest-"
+SAMPLE_OWNER = "sample"  # public read-only demo doc, owned by this reserved user
+GUEST_TTL_S = int(os.getenv("AURALITH_GUEST_TTL_HOURS", "24")) * 3600
 
 
 def hash_key(key: str) -> str:
@@ -110,7 +114,11 @@ def db_user_for_key(url: str, key: str) -> str | None:
     ensure_schema(url)
     with _pg_engine(url).connect() as c:
         return c.execute(
-            text("SELECT owner FROM auralith_keys WHERE key_hash = :h"), {"h": hash_key(key)}
+            text(
+                "SELECT owner FROM auralith_keys WHERE key_hash = :h AND "
+                "(owner NOT LIKE :g OR created_at > now() - make_interval(secs => :ttl))"
+            ),
+            {"h": hash_key(key), "g": GUEST_PREFIX + "%", "ttl": GUEST_TTL_S},
         ).scalar()
 
 
@@ -184,6 +192,41 @@ def delete_doc(url: str, owner: str, doc_id: str) -> bool:
                 {"p": doc_id + "\\_\\_%"},  # doc_id is 12 hex (row existed): no wildcards
             )
     return gone is not None
+
+
+def sweep_guests(url: str, limit: int = 20) -> int:
+    """Bounded cleanup of expired guest data; only guest-% / ip:% owners are ever touched."""
+    ensure_schema(url)
+    p = {"g": GUEST_PREFIX + "%", "ttl": GUEST_TTL_S, "n": limit}
+    with _pg_engine(url).connect() as c:
+        stale = c.execute(
+            text(
+                "SELECT owner, doc_id FROM auralith_docs WHERE owner LIKE :g AND "
+                "created_at < now() - make_interval(secs => :ttl) LIMIT :n"
+            ),
+            p,
+        ).all()
+    n = sum(delete_doc(url, owner, doc_id) for owner, doc_id in stale)
+    with _pg_engine(url).begin() as c:
+        n += c.execute(
+            text(
+                "DELETE FROM auralith_keys WHERE id IN (SELECT id FROM auralith_keys WHERE "
+                "owner LIKE :g AND created_at < now() - make_interval(secs => :ttl) LIMIT :n)"
+            ),
+            p,
+        ).rowcount
+        c.execute(
+            text(
+                "DELETE FROM auralith_usage WHERE owner LIKE :g AND "
+                "owner NOT IN (SELECT owner FROM auralith_keys)"
+            ),
+            p,
+        )
+        c.execute(  # per-IP issuance counters use 1h windows (bucket guest:3600)
+            text("DELETE FROM auralith_usage WHERE owner LIKE :ip AND win < :w"),
+            {"ip": "ip:%", "w": int(time.time() // 3600)},
+        )
+    return n
 
 
 # Bootstrap keys come from AURALITH_API_KEYS; more are added at runtime via /admin/keys.

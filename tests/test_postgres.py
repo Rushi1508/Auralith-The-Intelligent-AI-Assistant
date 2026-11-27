@@ -335,3 +335,124 @@ def test_runtime_keys_create_use_revoke(monkeypatch, pg_url):
     assert client.delete(f"/admin/keys/{made.json()['id']}", headers=admin).status_code == 204
     assert client.get("/documents", headers=new).status_code == 401
     assert client.delete(f"/admin/keys/{made.json()['id']}", headers=admin).status_code == 404
+
+
+def _backdate_key(pg_url, key_id, hours=48):
+    from sqlalchemy import text
+
+    with _pg_engine(pg_url).begin() as c:
+        c.execute(
+            text("UPDATE auralith_keys SET created_at = now() - make_interval(hours => :h) "
+                 "WHERE id = :i"),
+            {"h": hours, "i": key_id},
+        )
+
+
+def _drop_owners(pg_url, *owners):
+    from sqlalchemy import text
+
+    with _pg_engine(pg_url).begin() as c:
+        for t in ("auralith_keys", "auralith_docs", "auralith_usage"):
+            c.execute(text(f"DELETE FROM {t} WHERE owner = ANY(:o)"), {"o": list(owners)})
+
+
+def test_guest_issue_use_expire_and_per_ip(monkeypatch, pg_url):
+    from fastapi.testclient import TestClient
+    from sqlalchemy import text
+
+    from auralith import api
+    from auralith.registry import hash_key
+
+    monkeypatch.setenv("AURALITH_GUEST_ENABLED", "1")
+    monkeypatch.setenv("AURALITH_API_KEYS", f"alice:{hash_key('ka')}")
+    monkeypatch.setattr(api, "GUEST_PER_IP_HOUR", 2)
+    monkeypatch.setitem(api.GUEST_POOL, "guest", [(0, 86400)])
+    client = TestClient(api.app)
+    ip = f"10.{uuid.uuid4().int % 250}.{uuid.uuid4().int % 250}.{uuid.uuid4().int % 250}"
+    h = {"X-Forwarded-For": f"1.2.3.4, {ip}"}
+    made = []
+    try:
+        for _ in range(2):
+            r = client.post("/guest", headers=h)
+            assert r.status_code == 201
+            made.append(r.json())
+        assert client.post("/guest", headers=h).status_code == 429
+        g = made[0]
+        assert g["user"].startswith("guest-") and g["expires_in"] > 0
+        assert client.get("/documents", headers={"X-API-Key": g["key"]}).status_code == 200
+        with _pg_engine(pg_url).connect() as c:
+            kid = c.execute(
+                text("SELECT id FROM auralith_keys WHERE owner = :o"), {"o": g["user"]}
+            ).scalar_one()
+        _backdate_key(pg_url, kid)
+        assert client.get("/documents", headers={"X-API-Key": g["key"]}).status_code == 401
+    finally:
+        _drop_owners(pg_url, f"ip:{ip}", *[m["user"] for m in made])
+
+
+def test_sweep_guests_only_touches_guest_rows(pg_url):
+    from sqlalchemy import text
+
+    from auralith.registry import create_key, list_keys, save_doc, sweep_guests
+
+    tag = uuid.uuid4().hex[:8]
+    guest, named, sample = f"guest-{tag}", f"u{tag}", "sample"
+    docs = {o: uuid.uuid4().hex[:12] for o in (guest, named, sample)}
+    try:
+        for o, d in docs.items():
+            save_doc(pg_url, o, {"doc_id": d, "filename": "f", "owner": o})
+        ids = {o: create_key(pg_url, o)["id"] for o in (guest, named)}
+        with _pg_engine(pg_url).begin() as c:  # everything old
+            c.execute(
+                text("UPDATE auralith_docs SET created_at = now() - interval '48 hours' "
+                     "WHERE doc_id = ANY(:d)"),
+                {"d": list(docs.values())},
+            )
+        for i in ids.values():
+            _backdate_key(pg_url, i)
+        sweep_guests(pg_url, limit=1000)
+        with _pg_engine(pg_url).connect() as c:
+            left = {r[0] for r in c.execute(
+                text("SELECT owner FROM auralith_docs WHERE doc_id = ANY(:d)"),
+                {"d": list(docs.values())})}
+        assert left == {named, sample}
+        users = {k["user"] for k in list_keys(pg_url)}
+        assert guest not in users and named in users
+    finally:
+        _drop_owners(pg_url, guest, named, sample)
+
+
+def test_guest_asks_sample_but_cannot_delete(monkeypatch, sample_docs, pg_url):
+    import json
+
+    from langchain_postgres import PGVector
+
+    from auralith.config import PRODUCTION_CONFIG
+    from auralith.registry import create_key, hash_key
+    from tests.test_api import FakeChatModel
+
+    monkeypatch.setenv("AURALITH_API_KEYS", f"sample:{hash_key('ks')}")
+    monkeypatch.setenv("AURALITH_GUEST_ENABLED", "1")
+    client = _api_client(monkeypatch, sample_docs, FakeChatModel("ok [1]"))
+    pdf = b"%PDF-1.4 " + uuid.uuid4().hex.encode()
+    doc_id = client.post(
+        "/ingest", files={"file": ("a.pdf", pdf, "application/pdf")},
+        headers={"X-API-Key": "ks"},
+    ).json()["doc_id"]
+    made = create_key(pg_url, f"guest-{uuid.uuid4().hex[:8]}")
+    g = {"X-API-Key": made["key"]}
+    try:
+        assert client.get("/sample", headers=g).json()["doc_id"] == doc_id
+        r = client.post("/ask", json={"doc_id": doc_id, "question": "encoder"}, headers=g)
+        events = [json.loads(line) for line in r.text.splitlines()]
+        assert r.status_code == 200 and events[0]["passages"]
+        assert client.delete(f"/documents/{doc_id}", headers=g).status_code == 404
+    finally:
+        s = Settings.from_env()
+        PGVector(
+            embeddings=DeterministicFakeEmbedding(size=16),
+            collection_name=f"{doc_id}__{PRODUCTION_CONFIG.index_key}",
+            connection=_pg_engine(s.database_url),
+            use_jsonb=True,
+        ).delete_collection()
+        _drop_owners(pg_url, "sample", made["user"])

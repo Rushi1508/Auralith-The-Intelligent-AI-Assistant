@@ -13,6 +13,7 @@ services:
       - {key: WEB_CONCURRENCY, value: "1"}
       - {key: AURALITH_MAX_INFLIGHT, value: "1"}
       - {key: PGCONNECT_TIMEOUT, value: "10"}
+      - {key: AURALITH_GUEST_ENABLED, value: "1"}
       - {key: DATABASE_URL, sync: false}
       - {key: GEMINI_API_KEY, sync: false}
       - {key: AURALITH_API_KEYS, sync: false}
