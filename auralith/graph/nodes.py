@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import date
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -58,8 +59,13 @@ No explanation before or after.
 
 CONVERSE_PROMPT = """You are Auralith, a helpful assistant. Answer the user's \
 request clearly. If it is a task, give concrete step-by-step instructions.
+Today's date is {today}.
 
 {history}Request: {query}"""
+
+
+def _today() -> str:
+    return date.today().strftime("%A, %d %B %Y")  # server-local (UTC on Render)
 
 SEARCH_SYNTHESIS_PROMPT = """Answer the user's question using the web search \
 results below. Cite sources by their number, like [1].
@@ -163,13 +169,18 @@ def search_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
         {"title": r.title, "url": r.url, "snippet": r.snippet} for r in response.results
     ]
     if not response.ok:
+        # Degrade to the model's own knowledge (labelled) rather than answering nothing.
+        note = f"I could not retrieve web results for {query!r}."
+        fallback = converse_node(state, llm)
+        if fallback.get("answer"):
+            answer = f"_{note} Answering from my own knowledge, which may be out of date._\n\n"
+            answer += fallback["answer"]
+        else:
+            answer = f"{note} ({response.error or 'no results'})"
         return {
             "search_results": results,
             "error": response.error or "Search returned no results.",
-            "answer": (
-                f"I could not retrieve web results for {query!r}. "
-                f"({response.error or 'no results'})"
-            ),
+            "answer": answer,
             "trace": ["search:failed"],
         }
 
@@ -234,7 +245,7 @@ def code_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
 def converse_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     query = state.get("parameters") or state["query"]
     try:
-        prompt = CONVERSE_PROMPT.format(history=_history(state), query=query)
+        prompt = CONVERSE_PROMPT.format(history=_history(state), query=query, today=_today())
         answer = _content(llm.invoke(prompt))
     except Exception as exc:  # noqa: BLE001
         return {

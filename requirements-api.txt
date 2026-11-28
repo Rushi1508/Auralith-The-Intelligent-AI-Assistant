@@ -21,4 +21,5 @@ pypdf==6.16.1
 tiktoken==0.13.0
 ollama==0.6.2
 ddgs==9.15.0
+tavily-python==0.8.5  # DuckDuckGo blocks/times out from cloud IPs; set AURALITH_SEARCH_BACKEND=tavily
 python-dotenv==1.2.2

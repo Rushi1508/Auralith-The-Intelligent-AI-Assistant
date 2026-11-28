@@ -73,7 +73,7 @@ def landing_page() -> None:
                  "search, code generation, or conversation."),
         ("PDF Query", "Upload a PDF and ask questions. Retrieved passages are "
                       "shown with their source page."),
-        ("Image Query", "Ask questions about an image using a local vision model."),
+        ("Image Query", "Upload an image and ask questions about it."),
     ]:
         col_button, col_text = st.columns([1, 4])
         if col_button.button(name, use_container_width=True):

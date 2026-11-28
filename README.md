@@ -130,7 +130,7 @@ and vectors are stored with pgvector and chat memory with the LangGraph Postgres
 `thread_id` the UI sends. Unset, it falls back to Chroma on disk and in-memory chat state (lost on restart).
 Docker Compose starts Postgres and sets this for you.
 
-The UI talks to the API over HTTP. `/ask` streams NDJSON (passages, then the full answer), not token-by-token. Image mode still runs locally.
+The UI talks to the API over HTTP. `/ask` streams NDJSON (passages, then the full answer), not token-by-token. Image mode posts to `/image`: Gemini (or OpenAI) reads the image when it is the generator; with Ollama it uses `AURALITH_VISION_MODEL` (default `llava`).
 
 Set `AURALITH_PROVIDER=openai` and `OPENAI_API_KEY` to use hosted models instead.
 

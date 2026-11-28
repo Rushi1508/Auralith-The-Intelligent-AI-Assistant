@@ -75,7 +75,7 @@ Then:
 - UI: `https://<AURALITH_DOMAIN>`
 - API: `https://api.<AURALITH_DOMAIN>/health` should show `"status": "ok"` and `"auth": true`; interactive docs are at `/docs`.
 
-Only Caddy (ports 80 and 443) is reachable from outside. Postgres, the API and the UI ports aren't published. Image mode still needs a local Ollama, so it doesn't work on this deploy; PDF Q&A and chat do.
+Only Caddy (ports 80 and 443) is reachable from outside. Postgres, the API and the UI ports aren't published. Image mode works when the generator is Gemini; with Ollama it needs a vision model (`AURALITH_VISION_MODEL`, default `llava`) pulled on the server.
 
 ## Operate
 

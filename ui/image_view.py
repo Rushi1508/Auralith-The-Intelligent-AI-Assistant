@@ -1,48 +1,29 @@
 """Image question-answering view.
 
 The inherited module passed Streamlit's `UploadedFile` object straight into
-`ollama.chat(..., images=[uploaded_image])`. Ollama expects file paths or raw
-bytes, not a file-like wrapper, so that call could not have worked as written.
-It also hardcoded the prompt to "Describe this image:" with no question field,
-despite the mode being called Image Query.
+`ollama.chat(..., images=[uploaded_image])`, which could not have worked, and
+hardcoded the prompt to "Describe this image:" with no question field.
 
-Both are fixed here: bytes are read out of the upload, and the user can ask an
-actual question.
+It now posts the image bytes and the user's question to the API's `/image`
+endpoint, so it works on the deployed site (Gemini) and locally (an Ollama
+vision model), behind the same auth and rate limits as the other modes.
 """
 
 from __future__ import annotations
 
+import httpx
 import streamlit as st
 
-DEFAULT_VISION_MODEL = "llava"
+from ui.pdf_view import _DOWN, API_URL, _detail, _headers
 
 
 def start_image_module() -> None:
     st.title("Auralith")
     st.caption("Image Query Mode")
-
-    try:
-        import ollama
-    except ImportError:
-        st.error("The `ollama` package is not installed: pip install ollama")
-        return
-
-    model = st.text_input("Vision model", value=DEFAULT_VISION_MODEL)
-
-    # Checked up front because the vision model is a separate multi-GB pull from
-    # the text generator, and "model not found" is by far the likeliest failure.
-    try:
-        available = {m.get("model") or m.get("name") for m in ollama.list().get("models", [])}
-    except Exception as exc:  # noqa: BLE001
-        st.error(f"Cannot reach Ollama: {exc}. Is `ollama serve` running?")
-        return
-
-    if model not in available and f"{model}:latest" not in available:
-        st.warning(
-            f"Model `{model}` is not pulled. Run `ollama pull {model}` first.\n\n"
-            f"Available: {', '.join(sorted(a for a in available if a)) or 'none'}"
-        )
-        return
+    st.caption(
+        "Images are sent to the configured model (Gemini on the public demo; Google may use "
+        "free-tier content to improve its products), so don't upload anything private."
+    )
 
     uploaded = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "webp"])
     if uploaded is None:
@@ -51,28 +32,24 @@ def start_image_module() -> None:
 
     st.image(uploaded, caption=uploaded.name, use_container_width=True)
     question = st.text_input("Question", value="Describe this image in detail.")
-
     if not st.button("Ask", type="primary"):
         return
 
-    # getvalue() returns bytes, which is what ollama actually accepts. Passing
-    # the UploadedFile object itself was the original bug.
-    image_bytes = uploaded.getvalue()
-
-    with st.spinner(f"Asking {model}..."):
+    with st.spinner("Looking at the image..."):
         try:
-            response = ollama.chat(
-                model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": question or "Describe this image.",
-                        "images": [image_bytes],
-                    }
-                ],
+            resp = httpx.post(
+                f"{API_URL}/image",
+                files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type)},
+                data={"question": question},
+                headers=_headers(),
+                timeout=None,
             )
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Vision model call failed: {type(exc).__name__}: {exc}")
+        except httpx.TransportError:
+            st.error(_DOWN)
             return
-
-    st.markdown(response["message"]["content"])
+    if resp.status_code >= 400:
+        st.error(_detail(resp))
+        return
+    body = resp.json()
+    st.markdown(body["answer"])
+    st.caption(f"Answered in {body['latency_seconds']:.2f}s")

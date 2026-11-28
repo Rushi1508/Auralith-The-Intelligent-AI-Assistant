@@ -7,6 +7,7 @@ the generator call is one blocking invoke.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import logging
@@ -22,9 +23,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 import psycopg
+from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
 from auralith.config import PRODUCTION_CONFIG, Settings, effective_config
@@ -37,7 +39,7 @@ from auralith.index import (
     open_pgvector,
 )
 from auralith.ingest import load_pdf
-from auralith.providers import ProviderError, check_backend
+from auralith.providers import ProviderError, check_backend, get_chat_model
 from auralith.rag import answer_question, condense_question
 from auralith.registry import (
     _USER,
@@ -617,6 +619,56 @@ def ask(
         json.dumps({"type": "done", "latency_seconds": r.latency_seconds}) + "\n",
     ]
     return StreamingResponse(iter(lines), media_type="application/x-ndjson")
+
+
+# Inline images are base64'd into one request; Gemini caps the whole request at ~20 MB.
+MAX_IMAGE_BYTES = 7 * 1024 * 1024
+_IMAGE_MAGIC = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"RIFF": "image/webp"}
+
+
+def _image_mime(data: bytes) -> str | None:
+    for magic, mime in _IMAGE_MAGIC.items():
+        if data.startswith(magic) and (mime != "image/webp" or data[8:12] == b"WEBP"):
+            return mime
+    return None
+
+
+@app.post("/image")
+def image(
+    file: UploadFile,
+    user: Annotated[str, Depends(current_user)],
+    question: Annotated[str, Form(max_length=MAX_QUESTION_CHARS)] = "Describe this image in detail.",
+) -> dict:
+    """Answer a question about one image with the generator (Gemini/OpenAI) or an Ollama vision model."""
+    data = file.file.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, f"Image exceeds {MAX_IMAGE_BYTES // (1024 * 1024)} MB.")
+    mime = _image_mime(data)
+    if mime is None:
+        raise HTTPException(415, "Only PNG, JPEG or WebP images are accepted.")
+    settings = Settings.from_env()
+    _rate_limit(settings, user, "llm")
+    _check_backend(settings)
+    hosted = settings.generator_provider == "gemini" or settings.provider == "openai"
+    model = None if hosted else os.getenv("AURALITH_VISION_MODEL", "llava")  # 3B text model can't see
+    url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    msg = HumanMessage(content=[
+        {"type": "text", "text": question.strip() or "Describe this image in detail."},
+        {"type": "image_url", "image_url": {"url": url}},
+    ])
+    t0 = time.perf_counter()
+    with _slot():
+        try:
+            raw = get_chat_model(settings, model=model).invoke([msg])
+        except ProviderError as exc:
+            raise HTTPException(503, str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001 - model/quota/network: report, don't 500
+            log.warning("image answer failed: %s", exc)
+            raise HTTPException(502, f"Vision model call failed: {type(exc).__name__}: {exc}") from exc
+    return {
+        "answer": (raw.content if hasattr(raw, "content") else str(raw)).strip(),
+        "latency_seconds": round(time.perf_counter() - t0, 3),
+    }
 
 
 @app.post("/chat")

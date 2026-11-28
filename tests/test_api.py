@@ -522,3 +522,59 @@ def test_sample_disabled_404_and_ask_fallback(client, monkeypatch, sample_docs):
     monkeypatch.setenv("AURALITH_GUEST_ENABLED", "1")
     assert client.get("/sample").json()["doc_id"] == "abc"
     assert client.post("/ask", json=body).status_code == 200
+
+
+PNG = b"\x89PNG\r\n\x1a\n fake"
+
+
+def test_image_answers_with_inline_image(client, monkeypatch):
+    seen = {}
+
+    class VisionModel:
+        def invoke(self, msgs, **_):
+            seen["content"] = msgs[0].content
+            return FakeResponse("A cat. ")
+
+    def fake_model(settings, model=None):
+        seen["model"] = model
+        return VisionModel()
+
+    monkeypatch.setattr("auralith.api.get_chat_model", fake_model)
+    monkeypatch.setenv("AURALITH_GENERATOR_PROVIDER", "ollama")
+    monkeypatch.setenv("AURALITH_PROVIDER", "ollama")
+    r = client.post("/image", files={"file": ("c.png", PNG, "image/png")}, data={"question": "What?"})
+    assert r.status_code == 200 and r.json()["answer"] == "A cat."
+    assert seen["content"][0] == {"type": "text", "text": "What?"}
+    assert seen["content"][1]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert seen["model"] == "llava"  # default Ollama provider: vision model, not the 3B text one
+
+    monkeypatch.setenv("AURALITH_GENERATOR_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    client.post("/image", files={"file": ("c.png", PNG, "image/png")})
+    assert seen["model"] is None  # hosted generator reads the image itself
+
+
+def test_image_rejects_non_image_and_too_large(client, monkeypatch):
+    r = client.post("/image", files={"file": ("x.png", b"%PDF-1.4", "image/png")})
+    assert r.status_code == 415
+    monkeypatch.setattr("auralith.api.MAX_IMAGE_BYTES", 10)
+    r = client.post("/image", files={"file": ("x.png", PNG + b"x" * 20, "image/png")})
+    assert r.status_code == 413
+
+
+def test_image_model_failure_is_502(client, monkeypatch):
+    class Broken:
+        def invoke(self, *_a, **_k):
+            raise RuntimeError("quota")
+
+    monkeypatch.setattr("auralith.api.get_chat_model", lambda s, model=None: Broken())
+    r = client.post("/image", files={"file": ("c.png", PNG, "image/png")})
+    assert r.status_code == 502 and "quota" in r.json()["detail"]
+
+
+def test_image_counts_against_llm_rate_limit(client, monkeypatch):
+    monkeypatch.setattr("auralith.api.get_chat_model", lambda s, model=None: FakeChatModel("ok"))
+    monkeypatch.setitem(api.LIMITS, "llm", [(1, 60)])
+    up = {"file": ("c.png", PNG, "image/png")}
+    assert client.post("/image", files=up).status_code == 200
+    assert client.post("/image", files=up).status_code == 429

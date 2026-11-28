@@ -188,9 +188,12 @@ class TestSearchNode:
             "auralith.graph.nodes.search_web",
             lambda *a, **k: SearchResponse(query="q", error="network down"),
         )
-        out = search_node({"query": "q", "parameters": "q"}, FakeChatModel("unused"))
+        out = search_node({"query": "q", "parameters": "q"}, FakeChatModel("own answer"))
         assert out["error"] == "network down"
         assert "could not retrieve" in out["answer"].lower()
+        assert out["answer"].endswith("own answer")  # degraded to the model's own knowledge
+        out = search_node({"query": "q", "parameters": "q"}, ExplodingChatModel())
+        assert "network down" in out["answer"]  # model down too: plain error message
 
     def test_results_reach_state_and_are_synthesised(self, monkeypatch):
         """The core fix versus pyautogui: results become data, not keystrokes."""
