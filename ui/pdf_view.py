@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import httpx
 import streamlit as st
@@ -69,6 +70,7 @@ def start_pdf_module() -> None:
     uploaded = st.file_uploader("Upload a PDF", type=["pdf"])
     if uploaded is None and use_sample:
         info = sample
+        _show_sample_pdf()
     elif uploaded is None:
         info = _pick_existing()
         if info is None:
@@ -78,6 +80,22 @@ def start_pdf_module() -> None:
         if info is None:
             return
     _ask(info)
+
+
+SAMPLE_PDF = Path(__file__).resolve().parent.parent / "samples" / "cafe-menu.pdf"
+
+
+def _show_sample_pdf() -> None:
+    """Let visitors read the sample themselves, so they can check the answers."""
+    if not SAMPLE_PDF.exists():
+        return
+    data = SAMPLE_PDF.read_bytes()
+    with st.expander("View the menu (the document the answers come from)", expanded=True):
+        try:
+            st.pdf(data, height=600)
+        except Exception:  # noqa: BLE001 - viewer needs the streamlit-pdf add-on
+            st.caption("Preview unavailable here; download the menu below.")
+        st.download_button("Download the menu (PDF)", data, "cafe-menu.pdf", "application/pdf")
 
 
 def _pick_existing() -> dict | None:
