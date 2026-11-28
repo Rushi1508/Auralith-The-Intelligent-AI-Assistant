@@ -255,6 +255,59 @@ def test_other_users_doc_404(client, monkeypatch, sample_docs):
     assert client.post("/ask", json=body, headers=b).status_code == 404
 
 
+def _two_docs(client, monkeypatch, sample_docs, headers=None):
+    """Ingest a.pdf and b.pdf; each gets a retriever returning its own passage."""
+    monkeypatch.setenv("AURALITH_RERANK_PROVIDER", "none")
+    monkeypatch.setattr("auralith.api.load_pdf", lambda path, doc_id: sample_docs)
+    report = IndexBuildReport("k", 7, 0.1, False, {})
+    monkeypatch.setattr("auralith.api.build_index", lambda *a, **k: (object(), report))
+    made = iter("abc")
+    monkeypatch.setattr(
+        "auralith.api.build_retriever",
+        lambda *a, **k: FakeRetriever(
+            [sample_docs[0].model_copy(update={"metadata": {
+                **sample_docs[0].metadata, "doc_id": next(made)}})]
+        ),
+    )
+    fake = FakeChatModel("both [1][2]")
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: fake)
+    ids = []
+    for name, body in (("a.pdf", PDF), ("b.pdf", PDF + b"2")):
+        up = {"file": (name, body, "application/pdf")}
+        ids.append(client.post("/ingest", files=up, headers=headers).json()["doc_id"])
+    return ids, fake
+
+
+def test_ask_across_two_docs(client, monkeypatch, sample_docs):
+    ids, _ = _two_docs(client, monkeypatch, sample_docs)
+    r = client.post("/ask", json={"doc_ids": ids, "question": "layers?"})
+    ps = json.loads(r.text.splitlines()[0])["passages"]
+    assert sorted(p["filename"] for p in ps) == ["a", "b"]
+    assert sorted(p["source_doc_id"] for p in ps) == sorted(ids)
+
+
+def test_ask_doc_ids_with_foreign_doc_404(client, monkeypatch, sample_docs):
+    a, b = _keys(monkeypatch)
+    ids, _ = _two_docs(client, monkeypatch, sample_docs, headers=a)
+    other = client.post(
+        "/ingest", files={"file": ("c.pdf", PDF + b"3", "application/pdf")}, headers=b
+    ).json()["doc_id"]
+    r = client.post("/ask", json={"doc_ids": [ids[0], other], "question": "q"}, headers=a)
+    assert r.status_code == 404
+
+
+def test_ask_history_limits(client, monkeypatch, sample_docs):
+    ids, fake = _two_docs(client, monkeypatch, sample_docs)
+    turn = {"question": "q", "answer": "a"}
+    r = client.post("/ask", json={"doc_ids": ids, "question": "q", "history": [turn] * 7})
+    assert r.status_code == 422
+    long = {"question": "q", "answer": "x" * (api.MAX_QUESTION_CHARS + 500)}
+    r = client.post("/ask", json={"doc_ids": ids, "question": "and b?", "history": [long]})
+    assert r.status_code == 200
+    assert len(fake.calls) == 2  # condense + answer
+    assert "x" * (api.MAX_QUESTION_CHARS + 1) not in fake.calls[0]
+
+
 def test_chat_thread_namespaced(client, monkeypatch):
     a, _ = _keys(monkeypatch)
     seen = []

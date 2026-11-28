@@ -69,17 +69,21 @@ def start_pdf_module() -> None:
 
     uploaded = st.file_uploader("Upload a PDF", type=["pdf"])
     if uploaded is None and use_sample:
-        info = sample
+        infos = [sample]
         _show_sample_pdf()
-    elif uploaded is None:
-        info = _pick_existing()
-        if info is None:
-            return
     else:
-        info = _ingest(uploaded)
-        if info is None:
+        new = None
+        if uploaded is not None:
+            # Every rerun (each question) would re-POST /ingest and spend ingest quota.
+            cache = st.session_state.setdefault("pdf_ingested", {})
+            new = cache.get(uploaded.file_id) or _ingest(uploaded)
+            if new is None:
+                return
+            cache[uploaded.file_id] = new
+        infos = _pick_existing(new)
+        if not infos:
             return
-    _ask(info)
+    _ask(infos)
 
 
 SAMPLE_PDF = Path(__file__).resolve().parent.parent / "samples" / "cafe-menu.pdf"
@@ -98,34 +102,52 @@ def _show_sample_pdf() -> None:
         st.download_button("Download the menu (PDF)", data, "cafe-menu.pdf", "application/pdf")
 
 
-def _pick_existing() -> dict | None:
-    """Choose (or delete) one of the caller's already-ingested documents."""
+def _pick_existing(new: dict | None = None) -> list[dict]:
+    """Choose which of the caller's ingested documents to ask across (or delete one)."""
     try:
         resp = httpx.get(f"{API_URL}/documents", headers=_headers(), timeout=30)
     except httpx.TransportError:
         st.error(_DOWN)
-        return None
+        return []
     if resp.status_code >= 400:
         st.error(_detail(resp))
-        return None
+        return []
     docs = resp.json()
     if not docs:
         st.info("Upload a PDF to begin.")
-        return None
-    info = st.selectbox(
-        "Or choose one of your documents",
-        docs,
-        format_func=lambda d: f"{d['filename']} ({d['n_pages']} pages)",
+        return []
+    by_id = {d["doc_id"]: d for d in docs}
+    sel = st.session_state.get("pdf_sel")
+    if sel is None:  # first visit: everything selected
+        st.session_state["pdf_sel"] = list(by_id)
+    else:  # drop deleted docs, which would make the multiselect raise
+        st.session_state["pdf_sel"] = [i for i in sel if i in by_id]
+    if new and st.session_state.get("pdf_added") != new["doc_id"]:  # once per upload
+        st.session_state["pdf_added"] = new["doc_id"]
+        if new["doc_id"] in by_id and new["doc_id"] not in st.session_state["pdf_sel"]:
+            st.session_state["pdf_sel"].append(new["doc_id"])
+    label = lambda i: f"{by_id[i]['filename']} ({by_id[i]['n_pages']} pages)"  # noqa: E731
+    chosen = st.multiselect(
+        "Documents to ask across", list(by_id), key="pdf_sel", format_func=label
     )
-    if st.button("Delete this document"):
-        r = httpx.delete(
-            f"{API_URL}/documents/{info['doc_id']}", headers=_headers(), timeout=30
-        )
-        if r.status_code >= 400:
-            st.error(_detail(r))
-            return None
-        st.rerun()
-    return info
+    # The doc in the upload box is re-ingested on rerun, so it can't be deleted here.
+    deletable = [i for i in by_id if not new or i != new["doc_id"]]
+    if new:
+        st.caption("Clear the upload box to delete the file you just uploaded.")
+    if deletable:
+        with st.expander("Delete a document"):
+            victim = st.selectbox("Document", deletable, format_func=label)
+            if st.button("Delete"):
+                r = httpx.delete(
+                    f"{API_URL}/documents/{victim}", headers=_headers(), timeout=30
+                )
+                if r.status_code >= 400:
+                    st.error(_detail(r))
+                    return []
+                st.rerun()
+    if not chosen:
+        st.info("Select at least one document.")
+    return [by_id[i] for i in chosen]
 
 
 def _ingest(uploaded) -> dict | None:
@@ -147,18 +169,39 @@ def _ingest(uploaded) -> dict | None:
     return resp.json()
 
 
-def _ask(info: dict) -> None:
-    cols = st.columns(4)
-    cols[0].metric("Pages", info["n_pages"])
-    cols[1].metric("Chunks", info["n_chunks"])
-    cols[2].metric("Passages/query", info["k"])
-    cols[3].metric(
-        "Index build",
-        "cached" if info["from_cache"] else f"{info['build_seconds']:.1f}s",
-    )
-    st.caption(f"Retrieval config: {info['config']}")
+def _sources(passages: list[dict], expanded: bool = False) -> None:
+    # The passages the answer was actually built from. Without this the user
+    # cannot audit a claim, which was the prototype's biggest honesty gap.
+    with st.expander(f"Sources ({len(passages)} passages)", expanded=expanded):
+        for p in passages:
+            name = p.get("filename") or p["doc_id"]
+            st.markdown(f"**[{p['n']}]** `{name}` page {p['page']}")
+            st.text(p["text"])
+            st.divider()
 
-    if info.get("owner") == "sample":
+
+def _ask(infos: list[dict]) -> None:
+    ids = [i["doc_id"] for i in infos]
+    if st.session_state.get("pdf_history_ids") != ids:  # new scope: old turns no longer apply
+        st.session_state["pdf_history_ids"] = ids
+        st.session_state["pdf_history"] = []
+    history = st.session_state.setdefault("pdf_history", [])
+
+    cols = st.columns(4)
+    cols[0].metric("Documents", len(infos))
+    cols[1].metric("Pages", sum(i["n_pages"] for i in infos))
+    cols[2].metric("Chunks", sum(i["n_chunks"] for i in infos))
+    cols[3].metric("Passages/query", infos[0]["k"])
+    st.caption(f"Retrieval config: {infos[0]['config']}")
+
+    for turn in history:
+        with st.chat_message("user"):
+            st.markdown(turn["question"])
+        with st.chat_message("assistant"):
+            st.markdown(turn["answer"])
+            _sources(turn["passages"])
+
+    if infos[0].get("owner") == "sample":
         for q in (
             "How much is a large latte?",
             "What vegan options are there?",
@@ -178,7 +221,13 @@ def _ask(info: dict) -> None:
             with httpx.stream(
                 "POST",
                 f"{API_URL}/ask",
-                json={"doc_id": info["doc_id"], "question": question},
+                json={
+                    "doc_ids": ids,
+                    "question": question,
+                    "history": [
+                        {"question": t["question"], "answer": t["answer"]} for t in history[-6:]
+                    ],
+                },
                 headers=_headers(),
                 timeout=None,
             ) as r:
@@ -210,13 +259,13 @@ def _ask(info: dict) -> None:
         )
     else:
         st.markdown(answer.get("answer", ""))
+        history.append(
+            {"question": question, "answer": answer.get("answer", ""), "passages": passages}
+        )
+    standalone = answer.get("standalone_question")
+    if standalone and standalone != question:
+        st.caption(f"Searched for: {standalone}")
 
-    # The passages the answer was actually built from. Without this the user
-    # cannot audit a claim, which was the prototype's biggest honesty gap.
-    with st.expander(f"Sources ({len(passages)} passages)", expanded=abstained):
-        for p in passages:
-            st.markdown(f"**[{p['n']}]** `{p['doc_id']}` page {p['page']}")
-            st.text(p["text"])
-            st.divider()
+    _sources(passages, expanded=abstained)
 
     st.caption(f"Answered in {events.get('done', {}).get('latency_seconds', 0):.2f}s")

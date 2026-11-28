@@ -63,3 +63,40 @@ def test_passages_shown_in_reading_order_with_relevance_numbers():
     text = format_passages(docs)
     assert text.index("[2] (source: cv, page 1, part 1)") < text.index("[3] (source: cv, page 1, part 2)") \
         < text.index("[1] (source: cv, page 1, part 3)")
+
+
+def test_condense_no_history_makes_no_llm_call(monkeypatch):
+    from auralith.config import Settings
+    from auralith.rag import condense_question
+
+    def boom(s):
+        raise AssertionError("LLM must not be called")
+
+    monkeypatch.setattr("auralith.rag.get_chat_model", boom)
+    assert condense_question([], "what?", Settings.from_env()) == "what?"
+
+
+def test_condense_falls_back_when_model_raises(monkeypatch):
+    from auralith.config import Settings
+    from auralith.rag import condense_question
+
+    class Broken:
+        def invoke(self, *_a, **_k):
+            raise RuntimeError("down")
+
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: Broken())
+    turn = {"question": "q", "answer": "a"}
+    assert condense_question([turn], "and then?", Settings.from_env()) == "and then?"
+
+
+def test_condense_strips_prefix_and_quotes(monkeypatch):
+    from auralith.config import Settings
+    from auralith.rag import condense_question
+
+    class M:
+        def invoke(self, *_a, **_k):
+            return type("R", (), {"content": 'Standalone question: "What is b?"'})()
+
+    monkeypatch.setattr("auralith.rag.get_chat_model", lambda s: M())
+    turn = {"question": "q", "answer": "a"}
+    assert condense_question([turn], "and b?", Settings.from_env()) == "What is b?"

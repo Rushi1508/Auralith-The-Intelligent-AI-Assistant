@@ -38,7 +38,7 @@ from auralith.index import (
 )
 from auralith.ingest import load_pdf
 from auralith.providers import ProviderError, check_backend
-from auralith.rag import answer_question
+from auralith.rag import answer_question, condense_question
 from auralith.registry import (
     _USER,
     GUEST_PREFIX,
@@ -59,7 +59,11 @@ from auralith.registry import (
     sweep_guests,
     user_for_key,
 )
-from auralith.retrievers import build_retriever, build_sparse_retriever
+from auralith.retrievers import (
+    build_retriever,
+    build_sparse_retriever,
+    multi_doc_retriever,
+)
 
 app = FastAPI(title="Auralith")
 
@@ -72,6 +76,7 @@ _RID = re.compile(r"[A-Za-z0-9._-]{1,64}")  # client ids are logged: no spaces/n
 
 MAX_UPLOAD_BYTES = int(os.getenv("AURALITH_MAX_UPLOAD_MB", "25")) * 1024 * 1024
 MAX_QUESTION_CHARS = int(os.getenv("AURALITH_MAX_QUESTION_CHARS", "2000"))
+MAX_ASK_DOCS = int(os.getenv("AURALITH_MAX_ASK_DOCS", "5"))
 MAX_INFLIGHT = int(os.getenv("AURALITH_MAX_INFLIGHT", "4"))
 _SLOTS = threading.BoundedSemaphore(MAX_INFLIGHT)
 # Per-user quotas, shared across workers via Postgres: bucket -> [(limit, window_seconds)]; 0 = off.
@@ -112,9 +117,17 @@ _CACHE_MAX = 32
 DEGRADED: dict[str, str] = {}
 
 
+class Turn(BaseModel):
+    # No length cap: a long echoed answer must not 422; it is truncated when used.
+    question: str
+    answer: str
+
+
 class AskRequest(BaseModel):
-    doc_id: str
+    doc_id: str | None = None
+    doc_ids: Annotated[list[str], Field(max_length=MAX_ASK_DOCS)] | None = None
     question: Annotated[str, Field(max_length=MAX_QUESTION_CHARS)]
+    history: Annotated[list[Turn], Field(max_length=6)] = []
 
 
 class KeyRequest(BaseModel):
@@ -537,34 +550,64 @@ def ask(
     body: AskRequest, user: Annotated[str, Depends(current_user)]
 ) -> StreamingResponse:
     settings = Settings.from_env()
-    doc = _get_doc(body.doc_id, user, settings)
-    if doc is None and _guest_enabled() and user != SAMPLE_OWNER:  # read-only shared sample
-        doc = _get_doc(body.doc_id, SAMPLE_OWNER, settings)
-    if doc is None:
-        raise HTTPException(404, "Unknown doc_id; ingest the PDF first.")
+    ids = list(dict.fromkeys(body.doc_ids or ([body.doc_id] if body.doc_id else [])))
+    if not ids:
+        raise HTTPException(422, "doc_id or doc_ids is required.")
+    docs = []
+    for did in ids:
+        doc = _get_doc(did, user, settings)
+        if doc is None and _guest_enabled() and user != SAMPLE_OWNER:  # read-only shared sample
+            doc = _get_doc(did, SAMPLE_OWNER, settings)
+        if doc is None:  # never skip silently: the answer would claim a wrong scope
+            raise HTTPException(404, "Unknown doc_id; ingest the PDF first.")
+        docs.append(doc)
     if not body.question.strip():
         raise HTTPException(422, "Question is empty.")
     _rate_limit(settings, user, "llm")
+    history = [
+        {"question": t.question[:MAX_QUESTION_CHARS], "answer": t.answer[:MAX_QUESTION_CHARS]}
+        for t in body.history
+    ]
+    if history:
+        _rate_limit(settings, user, "llm")  # the condense call spends LLM quota too
     _check_backend(settings)
+    config = effective_config(PRODUCTION_CONFIG, settings)
     with _slot():
-        r = answer_question(
-            body.question, doc["retriever"], effective_config(PRODUCTION_CONFIG, settings), settings,
-            fallback=doc["sparse"],
+        standalone = condense_question(
+            history, body.question, settings, MAX_QUESTION_CHARS
         )
+        r = answer_question(
+            standalone,
+            multi_doc_retriever([d["retriever"] for d in docs], config, settings),
+            config, settings,
+            fallback=multi_doc_retriever(
+                [d["sparse"] for d in docs], config, settings, rerank=False
+            ),
+        )
+    infos = [d["info"] for d in docs]
     degraded = "degraded" in r.meta
     if degraded:
         DEGRADED["retrieval"] = str(r.meta["degraded"])
     elif r.passages:
         DEGRADED.pop("retrieval", None)
-    passages = [
-        {**c, "text": d.page_content[:1200]} for c, d in zip(r.citations, r.passages)
-    ]
+    passages = []
+    for c, d in zip(r.citations, r.passages):
+        # shortcut: chunk metadata carries only the filename stem, so same-stem files in
+        # one ask can't be told apart (source_doc_id None); tag at retrieval to fix.
+        hit = [i for i in infos if i["filename"] == c["doc_id"]]
+        src = infos[0] if len(infos) == 1 else hit[0] if len(hit) == 1 else None
+        passages.append({
+            **c, "text": d.page_content[:1200],
+            "source_doc_id": src["doc_id"] if src else None,
+            "filename": src["filename"] if src else c["doc_id"],
+        })
     lines = [
         json.dumps({"type": "passages", "passages": passages}) + "\n",
         json.dumps(
             {
                 "type": "answer",
                 "answer": r.answer,
+                "standalone_question": standalone,
                 "abstained": r.abstained,
                 "error": r.error,
                 "degraded": degraded,

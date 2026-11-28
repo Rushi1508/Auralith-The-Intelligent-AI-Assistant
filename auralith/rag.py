@@ -19,6 +19,7 @@ Differences from the inherited chain that matter:
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -116,6 +117,39 @@ def format_passages(docs: list[Document]) -> str:
                                      int(it[1].metadata.get("page") or 0),
                                      int(it[1].metadata["chunk_index"])))
     return "\n\n".join(f"[{i + 1}] ({label(d)})\n{d.page_content.strip()}" for i, d in ordered)
+
+
+CONDENSE_PROMPT = """Rewrite the follow-up question as a standalone question, using the conversation for context.
+Keep names, numbers and terms exactly. If it is already standalone, return it unchanged.
+Reply with ONLY the question.
+
+Conversation:
+{history}
+
+Follow-up question: {question}
+
+Standalone question:"""
+
+
+def condense_question(
+    history: list[dict], question: str, settings: Settings, max_chars: int = 2000
+) -> str:
+    """Make a follow-up searchable on its own; no history means no LLM call."""
+    if not history:
+        return question
+    convo = "\n".join(
+        f"User: {t.get('question', '')}\nAssistant: {t.get('answer', '')}" for t in history
+    )
+    try:
+        raw = get_chat_model(settings).invoke(
+            CONDENSE_PROMPT.format(history=convo, question=question)
+        )
+        text = (raw.content if hasattr(raw, "content") else str(raw)).strip()
+    except Exception as exc:  # noqa: BLE001 - degrade to the raw question
+        log.warning("Condense failed (%s); using the raw question", exc)
+        return question
+    text = re.sub(r"(?i)^\s*standalone question:\s*", "", text).strip().strip("\"'`").strip()
+    return text[:max_chars] or question
 
 
 def answer_question(

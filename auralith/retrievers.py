@@ -119,6 +119,56 @@ class DecomposeRetriever(BaseRetriever):
         return merged[: self.k]
 
 
+class MultiDocRetriever(BaseRetriever):
+    """Fan out over per-document retrievers, interleave by rank, rerank jointly.
+
+    Each doc is its own vector collection with no owner column, so a multi-doc
+    question cannot be a filter; it is one retrieval per doc. The shared
+    reranker then picks the best passages across all of them.
+    """
+
+    retrievers: list[object]  # anything with .invoke(query)
+    reranker: object | None = None
+    k: int = 6
+
+    def _get_relevant_documents(self, query, *, run_manager=None):
+        # shortcut: sequential fan-out, latency grows with doc count; cap docs per ask
+        lists = [r.invoke(query) for r in self.retrievers]
+        merged, seen = [], set()
+        for rank in range(max((len(l) for l in lists), default=0)):
+            for docs in lists:
+                if rank < len(docs):
+                    d = docs[rank]
+                    key = (d.metadata.get("doc_id"), d.metadata.get("page"), d.page_content)
+                    if key not in seen:
+                        seen.add(key)
+                        merged.append(d)
+        if self.reranker is not None and merged:
+            merged = list(self.reranker.compress_documents(merged, query))
+        return merged[: self.k]
+
+
+def multi_doc_retriever(
+    retrievers: list[BaseRetriever],
+    config: RetrievalConfig,
+    settings: Settings,
+    rerank: bool = True,
+) -> BaseRetriever:
+    """One retriever over several docs; a single doc is returned untouched."""
+    if len(retrievers) == 1:
+        return retrievers[0]
+    reranker = None
+    if rerank and config.use_rerank and settings.rerank_provider != "none":
+        from langchain_classic.retrievers.document_compressors import (
+            CrossEncoderReranker,
+        )
+
+        reranker = CrossEncoderReranker(
+            model=get_cross_encoder(settings), top_n=config.k
+        )
+    return MultiDocRetriever(retrievers=retrievers, reranker=reranker, k=config.k)
+
+
 def build_retriever(
     store: VectorStore,
     config: RetrievalConfig,

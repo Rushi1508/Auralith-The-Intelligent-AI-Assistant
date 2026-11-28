@@ -168,3 +168,22 @@ class TestRealRetrieval:
         # the test fail for a correct implementation.
         assert {d.metadata["chunk_id"] for d in reranked}
         assert plain
+
+
+def test_multi_doc_retriever_interleaves_and_trims():
+    from auralith.retrievers import MultiDocRetriever
+
+    class Fixed(BaseRetriever):
+        docs: list
+
+        def _get_relevant_documents(self, query, *, run_manager=None):
+            return self.docs
+
+    def mk(name):
+        return Fixed(docs=[
+            Document(page_content=f"{name}{i}", metadata={"doc_id": name, "page": i})
+            for i in range(3)
+        ])
+
+    out = MultiDocRetriever(retrievers=[mk("a"), mk("b")], k=4).invoke("q")
+    assert [d.page_content for d in out] == ["a0", "b0", "a1", "b1"]
