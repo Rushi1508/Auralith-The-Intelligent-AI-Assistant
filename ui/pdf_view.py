@@ -222,6 +222,7 @@ def _ask(infos: list[dict]) -> None:
                 "POST",
                 f"{API_URL}/ask",
                 json={
+                    "doc_id": ids[0],  # old API (mid-deploy) ignores doc_ids
                     "doc_ids": ids,
                     "question": question,
                     "history": [
